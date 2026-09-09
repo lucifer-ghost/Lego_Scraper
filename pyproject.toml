@@ -1,0 +1,11 @@
+[project]
+name = "lego-scraper"
+version = "1.0.0"
+description = "LEGO Deals and Cars Radar for Amazon & Flipkart"
+dependencies = [
+    "curl_cffi>=0.7.0",
+    "beautifulsoup4>=4.12.0"
+]
+
+[tool.vercel]
+entrypoint = "server.py"
