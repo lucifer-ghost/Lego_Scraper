@@ -157,8 +157,9 @@ class handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         sys.stderr.write(f"[Server] {format % args}\n")
 
-# Backwards compatibility alias
+# Backwards and framework compatibility aliases
 DealsHandler = handler
+app = handler
 
 def run_server(port=5000, auto_open=True):
     server_address = ('', port)

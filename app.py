@@ -1,5 +1,4 @@
-# Vercel entrypoint alias
-from server import handler, DealsHandler
+from server import handler, DealsHandler, app
 
 # If imported or run
 if __name__ == "__main__":
