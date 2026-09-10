@@ -78,10 +78,14 @@ def load_verified_deals(min_discount: int = 0, max_discount: int = 100, platform
             d_plat = d.get('platform', '').lower()
             if plat not in ("both", "all") and plat not in d_plat:
                 continue
-            disc = d.get('discount', 0)
+            raw_disc = d.get('discount', 0)
+            try:
+                disc = int(re.sub(r'[^\d]', '', str(raw_disc))) if re.sub(r'[^\d]', '', str(raw_disc)) else 0
+            except Exception:
+                disc = 0
             if not (min_discount <= disc <= max_discount):
                 continue
-            if official_only and not is_official_lego(d.get('title', '')):
+            if official_only and not (is_official_lego(d.get('title', '')) or d.get('platform') in ('Hamleys', 'MyBrickHouse')):
                 continue
             d_copy = dict(d)
             d_copy['cached'] = True
@@ -97,7 +101,13 @@ def load_verified_deals(min_discount: int = 0, max_discount: int = 100, platform
                 d_copy['cached'] = True
                 d_copy['closest_match'] = True
                 filtered.append(d_copy)
-            filtered.sort(key=lambda x: (x.get('discount') or 0), reverse=True)
+            def _get_disc(x):
+                try:
+                    c = re.sub(r'[^\d]', '', str(x.get('discount', 0)))
+                    return int(c) if c else 0
+                except Exception:
+                    return 0
+            filtered.sort(key=_get_disc, reverse=True)
             filtered = filtered[:20]
             
         return filtered
@@ -580,91 +590,89 @@ def scrape_hamleys(
     official_only: bool = True,
     verbose: bool = True
 ) -> List[Dict]:
-    """Scrape LEGO sets and deals from Hamleys India (hamleys.in)."""
+    """Scrape LEGO sets and deals from Hamleys India (hamleys.in) via native Algolia/Fynd catalog API."""
     deals = []
-    seen_urls = set()
-    queries = [f"brand={query}", f"q={query}"]
-    
+    seen = set()
     session = requests.Session()
     headers = {
+        'Accept': 'application/json',
         'Accept-Language': 'en-IN,en;q=0.9',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': 'https://hamleys.in/products?brand=lego'
     }
     
-    for q in queries:
-        url = f"https://hamleys.in/products?{q}"
+    page_id = "1"
+    page_num = 1
+    
+    while page_id and page_num <= 10:
+        url = f"https://hamleys.in/ext/search/application/api/v1.0/products?page_id={page_id}&page_size=100&f=brand%3Alego"
         if verbose:
-            print(f"[Hamleys India] Scanning {url}...")
+            print(f"[Hamleys India] Scanning API Page {page_num}...")
         try:
             r = session.get(url, impersonate="chrome124", headers=headers, timeout=15)
             if r.status_code != 200:
-                continue
-            soup = BeautifulSoup(r.text, 'html.parser')
-            grid = soup.find('div', class_=lambda c: c and 'product-grid' in c)
-            if not grid:
-                continue
-            for div in grid.find_all('div', recursive=False):
-                a = div.find('a', href=re.compile(r'/product/'))
-                if not a:
-                    continue
-                href = a['href']
-                if href in seen_urls:
-                    continue
-                seen_urls.add(href)
+                break
+            data = r.json()
+            items = data.get('items', [])
+            if not items:
+                break
                 
-                h3 = div.find('h3')
-                title = h3.get_text(strip=True) if h3 else href.split('/product/')[-1].replace('-', ' ').title()
-                
-                if official_only and not is_official_lego(title):
+            for it in items:
+                name = it.get('name', '')
+                if not name:
                     continue
-                    
-                img = div.find('img')
-                img_url = img.get('src') or img.get('data-src') if img else ''
+                if official_only and not (is_official_lego(name) or it.get('brand', {}).get('name', '').upper() == 'LEGO'):
+                    continue
+                slug = it.get('slug', '')
+                if not slug or slug in seen:
+                    continue
+                seen.add(slug)
                 
-                # Prices
-                p_tag = div.find('p', class_='price')
-                mrp = None
-                price = None
-                if p_tag:
-                    lt = p_tag.find(class_='line-through')
-                    if lt:
-                        cleaned = re.sub(r'[^\d]', '', lt.get_text())
-                        mrp = int(cleaned) if cleaned else None
-                    sec = p_tag.find(class_=re.compile(r'textSecondary'))
-                    if sec:
-                        cleaned = re.sub(r'[^\d]', '', sec.get_text())
-                        price = int(cleaned) if cleaned else None
-                    if not price:
-                        nums = [int(re.sub(r'[^\d]', '', s)) for s in p_tag.stripped_strings if re.sub(r'[^\d]', '', s).isdigit() and len(re.sub(r'[^\d]', '', s)) >= 3]
-                        if nums:
-                            price = nums[-1]
-                if not mrp and price:
+                pr = it.get('price', {})
+                eff_min = pr.get('effective', {}).get('min')
+                eff_max = pr.get('effective', {}).get('max')
+                price = eff_min or eff_max
+                
+                mrk_min = pr.get('marked', {}).get('min')
+                mrk_max = pr.get('marked', {}).get('max')
+                mrp = mrk_max or mrk_min or price
+                
+                if not price:
+                    continue
+                if not mrp or mrp < price:
                     mrp = price
-                if not price and mrp:
-                    price = mrp
                     
-                disc = round((1 - price / mrp) * 100) if (mrp and price and mrp > price) else 0
+                disc = round((1 - price / mrp) * 100) if mrp > price else 0
                 if not (min_discount <= disc <= max_discount):
                     continue
                     
-                savings = (mrp - price) if (mrp and price and mrp > price) else 0
+                savings = (mrp - price) if mrp > price else 0
+                medias = it.get('medias', [])
+                img_url = medias[0].get('url', '') if medias else ''
                 
                 deals.append({
                     'platform': 'Hamleys',
-                    'id': href.split('/product/')[-1],
-                    'title': title,
+                    'id': str(it.get('uid', slug)),
+                    'title': name,
                     'price': price,
                     'mrp': mrp,
                     'discount': disc,
                     'savings': savings,
                     'rating': '4.8 ★',
                     'image': img_url,
-                    'url': f"https://hamleys.in{href}"
+                    'url': f"https://hamleys.in/product/{slug}"
                 })
+                
+            page_info = data.get('page', {})
+            if not page_info.get('has_next'):
+                break
+            page_id = page_info.get('next_id')
+            page_num += 1
         except Exception as e:
             if verbose:
-                print(f"  [Hamleys] Error fetching {url}: {e}")
-                
+                print(f"  [Hamleys] Error on page {page_num}: {e}")
+            break
+            
     return deals
 
 
@@ -673,22 +681,23 @@ def scrape_mybrickhouse(
     min_discount: int = 0,
     max_discount: int = 100,
     official_only: bool = True,
-    pages: int = 2,
+    pages: int = 0,
     verbose: bool = True
 ) -> List[Dict]:
     """Scrape LEGO sets and deals from MyBrickHouse India (lego.mybrickhouse.com via Shopify API)."""
     deals = []
     session = requests.Session()
-    max_p = max(1, min(pages or 2, 4))
+    page = 1
+    max_pages = pages if pages > 0 else 10
     
-    for page in range(1, max_p + 1):
+    while page <= max_pages:
         url = f"https://lego.mybrickhouse.com/products.json?limit=250&page={page}"
         if verbose:
             print(f"[MyBrickHouse India] Scanning Page {page}...")
         try:
             r = session.get(url, impersonate="chrome124", timeout=15)
             if r.status_code != 200:
-                continue
+                break
             data = r.json()
             products = data.get('products', [])
             if not products:
@@ -696,7 +705,7 @@ def scrape_mybrickhouse(
                 
             for p in products:
                 title = p.get('title', '')
-                if official_only and not is_official_lego(title):
+                if official_only and not (is_official_lego(title) or 'lego' in p.get('vendor', '').lower() or 'lego' in p.get('product_type', '').lower()):
                     continue
                     
                 v = p.get('variants', [{}])[0]
@@ -724,9 +733,11 @@ def scrape_mybrickhouse(
                     'image': img,
                     'url': f"https://lego.mybrickhouse.com/products/{handle}"
                 })
+            page += 1
         except Exception as e:
             if verbose:
                 print(f"  [MyBrickHouse] Error on page {page}: {e}")
+            break
                 
     return deals
 
@@ -788,7 +799,7 @@ def get_lego_deals(
                 min_discount=min_discount,
                 max_discount=max_discount,
                 official_only=official_only,
-                pages=2,
+                pages=0,
                 verbose=verbose
             )
 
@@ -1043,78 +1054,79 @@ def scrape_flipkart_cars(pages: int = 2, verbose: bool = True) -> List[Dict]:
     return cars
 
 def scrape_hamleys_cars(verbose: bool = True) -> List[Dict]:
-    """Scrape LEGO Formula 1, Speed Champions, and Technic cars from Hamleys India."""
+    """Scrape LEGO Formula 1, Speed Champions, and Technic cars from Hamleys India via native API."""
     cars = []
     seen = set()
-    queries = ['q=f1', 'q=speed+champions', 'q=technic', 'q=car']
     session = requests.Session()
     headers = {
+        'Accept': 'application/json',
         'Accept-Language': 'en-IN,en;q=0.9',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Referer': 'https://hamleys.in/products?brand=lego'
     }
     
-    for q in queries:
-        url = f"https://hamleys.in/products?{q}"
+    car_keywords = [
+        'car', 'f1', 'speed', 'racing', 'vehicle', 'ferrari', 'lamborghini',
+        'bugatti', 'porsche', 'mclaren', 'red bull', 'williams', 'alpine',
+        'haas', 'sauber', 'vcarb', 'aston martin', 'technic', 'batmobile',
+        'camaro', 'supra', 'mustang', 'mercedes', 'jeep', 'rover', 'truck',
+        'land rover', 'formula', 'dodge', 'corvette', 'koenigsegg', 'pagani'
+    ]
+    
+    page_id = "1"
+    page_num = 1
+    
+    while page_id and page_num <= 10:
+        url = f"https://hamleys.in/ext/search/application/api/v1.0/products?page_id={page_id}&page_size=100&f=brand%3Alego"
         try:
             r = session.get(url, impersonate="chrome124", headers=headers, timeout=15)
             if r.status_code != 200:
-                continue
-            soup = BeautifulSoup(r.text, 'html.parser')
-            grid = soup.find('div', class_=lambda c: c and 'product-grid' in c)
-            if not grid:
-                continue
-            for div in grid.find_all('div', recursive=False):
-                a = div.find('a', href=re.compile(r'/product/'))
-                if not a:
-                    continue
-                href = a['href']
-                if href in seen:
-                    continue
-                seen.add(href)
+                break
+            data = r.json()
+            items = data.get('items', [])
+            if not items:
+                break
                 
-                h3 = div.find('h3')
-                title = h3.get_text(strip=True) if h3 else href.split('/product/')[-1].replace('-', ' ').title()
-                
-                if not is_official_lego(title):
+            for it in items:
+                name = it.get('name', '')
+                if not name:
+                    continue
+                if not (is_official_lego(name) or it.get('brand', {}).get('name', '').upper() == 'LEGO'):
                     continue
                     
-                tl = title.lower()
-                car_keywords = ['car', 'f1', 'speed', 'racing', 'vehicle', 'ferrari', 'lamborghini', 'bugatti', 'porsche', 'mclaren', 'red bull', 'williams', 'alpine', 'haas', 'sauber', 'vcarb', 'aston martin', 'technic', 'batmobile', 'camaro', 'supra', 'mustang']
+                tl = name.lower()
                 if not any(k in tl for k in car_keywords):
                     continue
                     
-                img = div.find('img')
-                img_url = img.get('src') or img.get('data-src') if img else ''
+                slug = it.get('slug', '')
+                if not slug or slug in seen:
+                    continue
+                seen.add(slug)
                 
-                p_tag = div.find('p', class_='price')
-                mrp = None
-                price = None
-                if p_tag:
-                    lt = p_tag.find(class_='line-through')
-                    if lt:
-                        cleaned = re.sub(r'[^\d]', '', lt.get_text())
-                        mrp = int(cleaned) if cleaned else None
-                    sec = p_tag.find(class_=re.compile(r'textSecondary'))
-                    if sec:
-                        cleaned = re.sub(r'[^\d]', '', sec.get_text())
-                        price = int(cleaned) if cleaned else None
-                    if not price:
-                        nums = [int(re.sub(r'[^\d]', '', s)) for s in p_tag.stripped_strings if re.sub(r'[^\d]', '', s).isdigit() and len(re.sub(r'[^\d]', '', s)) >= 3]
-                        if nums:
-                            price = nums[-1]
-                if not mrp and price:
+                pr = it.get('price', {})
+                eff_min = pr.get('effective', {}).get('min')
+                eff_max = pr.get('effective', {}).get('max')
+                price = eff_min or eff_max
+                
+                mrk_min = pr.get('marked', {}).get('min')
+                mrk_max = pr.get('marked', {}).get('max')
+                mrp = mrk_max or mrk_min or price
+                
+                if not price:
+                    continue
+                if not mrp or mrp < price:
                     mrp = price
-                if not price and mrp:
-                    price = mrp
                     
-                disc = round((1 - price / mrp) * 100) if (mrp and price and mrp > price) else 0
-                savings = (mrp - price) if (mrp and price and mrp > price) else 0
-                category = categorize_lego_car(title)
+                disc = round((1 - price / mrp) * 100) if mrp > price else 0
+                savings = (mrp - price) if mrp > price else 0
+                category = categorize_lego_car(name)
+                medias = it.get('medias', [])
+                img_url = medias[0].get('url', '') if medias else ''
                 
                 cars.append({
                     'platform': 'Hamleys',
-                    'id': href.split('/product/')[-1],
-                    'title': title,
+                    'id': str(it.get('uid', slug)),
+                    'title': name,
                     'price': price,
                     'mrp': mrp,
                     'discount': disc,
@@ -1122,26 +1134,45 @@ def scrape_hamleys_cars(verbose: bool = True) -> List[Dict]:
                     'category': category,
                     'rating': '4.8 ★',
                     'image': img_url,
-                    'url': f"https://hamleys.in{href}"
+                    'url': f"https://hamleys.in/product/{slug}"
                 })
+                
+            page_info = data.get('page', {})
+            if not page_info.get('has_next'):
+                break
+            page_id = page_info.get('next_id')
+            page_num += 1
         except Exception as e:
             if verbose:
-                print(f"  [Hamleys Cars] Error: {e}")
-                
+                print(f"  [Hamleys Cars] Error on page {page_num}: {e}")
+            break
+            
     return cars
 
-def scrape_mybrickhouse_cars(pages: int = 3, verbose: bool = True) -> List[Dict]:
+
+def scrape_mybrickhouse_cars(pages: int = 0, verbose: bool = True) -> List[Dict]:
     """Scrape LEGO Formula 1, Speed Champions, and Technic cars from MyBrickHouse India."""
     cars = []
     seen = set()
     session = requests.Session()
     
-    for page in range(1, pages + 1):
+    car_keywords = [
+        'car', 'f1', 'speed', 'racing', 'vehicle', 'ferrari', 'lamborghini',
+        'bugatti', 'porsche', 'mclaren', 'red bull', 'williams', 'alpine',
+        'haas', 'sauber', 'vcarb', 'aston martin', 'technic', 'batmobile',
+        'camaro', 'supra', 'mustang', 'mercedes', 'jeep', 'rover', 'truck',
+        'land rover', 'formula', 'dodge', 'corvette', 'koenigsegg', 'pagani'
+    ]
+    
+    page = 1
+    max_pages = pages if pages > 0 else 10
+    
+    while page <= max_pages:
         url = f"https://lego.mybrickhouse.com/products.json?limit=250&page={page}"
         try:
             r = session.get(url, impersonate="chrome124", timeout=15)
             if r.status_code != 200:
-                continue
+                break
             data = r.json()
             products = data.get('products', [])
             if not products:
@@ -1149,11 +1180,10 @@ def scrape_mybrickhouse_cars(pages: int = 3, verbose: bool = True) -> List[Dict]
                 
             for p in products:
                 title = p.get('title', '')
-                if not is_official_lego(title):
+                if not (is_official_lego(title) or 'lego' in p.get('vendor', '').lower() or 'lego' in p.get('product_type', '').lower()):
                     continue
                     
                 tl = title.lower()
-                car_keywords = ['car', 'f1', 'speed', 'racing', 'vehicle', 'ferrari', 'lamborghini', 'bugatti', 'porsche', 'mclaren', 'red bull', 'aston martin', 'technic', 'batmobile', 'ford', 'mustang', 'mercedes', 'jaguar', 'koenigsegg']
                 if not any(k in tl for k in car_keywords):
                     continue
                     
@@ -1185,9 +1215,11 @@ def scrape_mybrickhouse_cars(pages: int = 3, verbose: bool = True) -> List[Dict]
                     'image': img,
                     'url': f"https://lego.mybrickhouse.com/products/{handle}"
                 })
+            page += 1
         except Exception as e:
             if verbose:
-                print(f"  [MyBrickHouse Cars] Error: {e}")
+                print(f"  [MyBrickHouse Cars] Error on page {page}: {e}")
+            break
                 
     return cars
 
@@ -1235,7 +1267,7 @@ def get_lego_cars(
             fut_amz = executor.submit(scrape_amazon_cars, pages=pages, verbose=verbose) if needs_amazon else None
             fut_flp = executor.submit(scrape_flipkart_cars, pages=pages, verbose=verbose) if needs_flipkart else None
             fut_ham = executor.submit(scrape_hamleys_cars, verbose=verbose) if needs_hamleys else None
-            fut_mbh = executor.submit(scrape_mybrickhouse_cars, pages=pages, verbose=verbose) if needs_mybrickhouse else None
+            fut_mbh = executor.submit(scrape_mybrickhouse_cars, pages=0, verbose=verbose) if needs_mybrickhouse else None
 
             if fut_amz:
                 try:

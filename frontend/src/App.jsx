@@ -4,7 +4,7 @@ import DealsRadarView from './components/DealsRadarView';
 import CarsSectionView from './components/CarsSectionView';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('deals');
+  const [activeTab, setActiveTab] = useState('cars');
 
   return (
     <div className="app-shell">
