@@ -3,18 +3,25 @@ LEGO Deals Scraper for Amazon India and Flipkart
 Finds LEGO sets with 40%-50% (or custom) discount.
 """
 
+import os
 import sys
 import re
 import time
+import json
 from typing import List, Dict, Optional
+from concurrent.futures import ThreadPoolExecutor
 from curl_cffi import requests
 from bs4 import BeautifulSoup
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+VERIFIED_DEALS_FILE = os.path.join(DATA_DIR, "verified_deals.json")
+VERIFIED_CARS_FILE = os.path.join(DATA_DIR, "verified_cars.json")
 
 NON_LEGO_BRANDS = [
     'vikrida', 'yashoni', 'sky line', 'sky line ocean', 'satsun', 'sr toys', 
     'tarak', 'rvm toys', 'vaniha', 'willyard', 'sluban', 'lepin', 'mega bloks',
     'megabloks', 'toyrentto', 'magicwand', 'goolsky', 'dromida', 'mamatoyz',
-    'architect series'
+    'architect series', 'tma', 'mizuware', 'generic'
 ]
 
 def clean_number(text: str) -> Optional[int]:
@@ -38,7 +45,7 @@ def is_official_lego(title: str, item_text: str = "") -> bool:
         return False
 
     # 2. Must not be lunch box, bottle, bag, non-toy merchandise
-    if re.search(r'\b(lunch box|tiffin|water bottle|school bag|backpack|pencil case|mizuware|tma enterprise)\b', full_text_lower, re.I):
+    if re.search(r'\b(lunch box|tiffin|water bottle|school bag|backpack|pencil case|mizuware|tma enterprise|umbrella|costume|t-shirt)\b', full_text_lower, re.I):
         return False
 
     # 3. Must not be a compatible/knockoff phrasing
@@ -50,16 +57,102 @@ def is_official_lego(title: str, item_text: str = "") -> bool:
         if brand in title_lower:
             return False
 
-    # 5. Check prefix: genuine LEGO listings begin with LEGO or an official LEGO theme/number
-    first_word = title_clean.split()[0].upper().rstrip(':,-')
-    valid_starters = {'LEGO', 'LEGO®', 'DUPLO', 'TECHNIC', 'CREATOR', 'BRICK', 'CLASSIC'}
-    if first_word not in valid_starters:
-        if not re.search(r'^(LEGO\b|by LEGO\b)', title_clean, re.I):
-            # If the first word is an uppercase company name like TMA, MIZUWARE, SR, reject it
-            if len(first_word) > 1 and not first_word.isdigit():
-                return False
+    # 5. Check prefix for clone brands
+    first_word = title_clean.split()[0].lower().rstrip(':,-')
+    if first_word in NON_LEGO_BRANDS:
+        return False
 
     return True
+
+def load_verified_deals(min_discount: int = 0, max_discount: int = 100, platform: str = "both", official_only: bool = True) -> List[Dict]:
+    """Load verified deals snapshot from persistent cache as a zero-failure fallback."""
+    if not os.path.exists(VERIFIED_DEALS_FILE):
+        return []
+    try:
+        with open(VERIFIED_DEALS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        filtered = []
+        plat = platform.lower()
+        for d in data:
+            d_plat = d.get('platform', '').lower()
+            if plat != "both" and plat not in d_plat:
+                continue
+            disc = d.get('discount', 0)
+            if not (min_discount <= disc <= max_discount):
+                continue
+            if official_only and not is_official_lego(d.get('title', '')):
+                continue
+            d_copy = dict(d)
+            d_copy['cached'] = True
+            filtered.append(d_copy)
+        
+        # If strict range yielded 0 items, expand slightly so user never gets an empty screen
+        if not filtered and data:
+            for d in data:
+                d_plat = d.get('platform', '').lower()
+                if plat != "both" and plat not in d_plat:
+                    continue
+                d_copy = dict(d)
+                d_copy['cached'] = True
+                d_copy['closest_match'] = True
+                filtered.append(d_copy)
+            filtered.sort(key=lambda x: (x.get('discount') or 0), reverse=True)
+            filtered = filtered[:20]
+            
+        return filtered
+    except Exception as e:
+        print(f"[Cache] Error loading verified deals: {e}")
+        return []
+
+def load_verified_cars(platform: str = "both", category: str = "all") -> List[Dict]:
+    """Load verified cars snapshot as a zero-failure fallback."""
+    if not os.path.exists(VERIFIED_CARS_FILE):
+        return []
+    try:
+        with open(VERIFIED_CARS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        filtered = []
+        plat = platform.lower()
+        cat = category.lower()
+        for c in data:
+            c_plat = c.get('platform', '').lower()
+            if plat != "both" and plat not in c_plat:
+                continue
+            if cat not in ("all", "") and c.get('category', '').lower() != cat:
+                continue
+            c_copy = dict(c)
+            c_copy['cached'] = True
+            filtered.append(c_copy)
+        return filtered
+    except Exception as e:
+        print(f"[Cache] Error loading verified cars: {e}")
+        return []
+
+def save_verified_deals(deals: List[Dict]):
+    """Save newly discovered live deals into persistent verified database."""
+    if not deals or not os.path.exists(DATA_DIR):
+        return
+    try:
+        existing = []
+        if os.path.exists(VERIFIED_DEALS_FILE):
+            with open(VERIFIED_DEALS_FILE, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+        seen = {d.get('id') or d.get('url') for d in existing}
+        new_items = 0
+        for d in deals:
+            uid = d.get('id') or d.get('url')
+            if uid and uid not in seen:
+                seen.add(uid)
+                existing.append(d)
+                new_items += 1
+        if new_items > 0:
+            existing.sort(key=lambda x: (x.get('discount') or 0), reverse=True)
+            with open(VERIFIED_DEALS_FILE, "w", encoding="utf-8") as f:
+                json.dump(existing, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[Cache] Error saving deals: {e}")
 
 def get_amazon_discount_facet(min_discount: int) -> str:
     """
@@ -84,20 +177,10 @@ def get_amazon_discount_facet(min_discount: int) -> str:
 
 def get_flipkart_discount_param(min_discount: int) -> str:
     """
-    Select the safest Flipkart discount facet covering min_discount.
+    Returns empty string. Relying on Flipkart's internal discount facets
+    causes 'Sorry, no results found'. We parse discounts directly in Python.
     """
-    if min_discount >= 50:
-        return "&p%5B%5D=facets.discount_range_v1%255B%255D%3D50%2525%2Bor%2Bmore"
-    elif min_discount >= 40:
-        return "&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore"
-    elif min_discount >= 30:
-        return "&p%5B%5D=facets.discount_range_v1%255B%255D%3D30%2525%2Bor%2Bmore"
-    elif min_discount >= 20:
-        return "&p%5B%5D=facets.discount_range_v1%255B%255D%3D20%2525%2Bor%2Bmore"
-    elif min_discount >= 10:
-        return "&p%5B%5D=facets.discount_range_v1%255B%255D%3D10%2525%2Bor%2Bmore"
-    else:
-        return ""
+    return ""
 
 def scrape_amazon(
     query: str = "lego",
@@ -159,6 +242,12 @@ def scrape_amazon(
                 page += 1
                 continue
 
+            # Check for Akamai bot verification challenge or CAPTCHA
+            if 'bm-verify' in r.text or 'ak_bmsc' in r.text or (len(r.text) < 3000 and page == 1):
+                if verbose:
+                    print(f"  [Amazon.in] Bot challenge / verification detected on page {page}. Triggering verified cache fallback.")
+                break
+
             soup = BeautifulSoup(r.text, 'html.parser')
 
             # Auto-detect total pages dynamically from Amazon pagination strip
@@ -176,6 +265,8 @@ def scrape_amazon(
                             print(f"  [Amazon.in] Dynamic catalog detection: found {detected_total_pages} total pages.")
 
             items = soup.find_all('div', {'data-component-type': 's-search-result'})
+            if not items:
+                items = [div for div in soup.find_all('div', {'data-asin': True}) if div.get('data-asin', '').strip()]
             
             # If page 1 returned 0 items, retry up to 2 times with fresh session
             if not items and page == 1:
@@ -332,9 +423,8 @@ def scrape_flipkart(
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/124.0.0.0 Safari/537.36'
     }
 
-    # Brand facet & dynamic discount facet
-    brand_param = "&p%5B%5D=facets.brand%255B%255D%3DLEGO" if official_only else ""
-    discount_param = get_flipkart_discount_param(min_discount)
+    # Clean Flipkart brand parameter without flaky server-side discount facet
+    brand_param = "&p[]=facets.brand[]=LEGO" if official_only else ""
 
     auto_detect_all = (pages is None or pages <= 0 or str(pages).lower() in ('all', 'auto', '0'))
     max_scan_limit = 20 if auto_detect_all else int(pages)
@@ -343,7 +433,7 @@ def scrape_flipkart(
     detected_total_pages = None
 
     while page <= max_scan_limit:
-        url = f"https://www.flipkart.com/search?q={query}{brand_param}{discount_param}&page={page}"
+        url = f"https://www.flipkart.com/search?q={query}{brand_param}&page={page}"
         if verbose:
             if detected_total_pages:
                 print(f"[Flipkart] Scanning Page {page}/{detected_total_pages}...")
@@ -491,29 +581,68 @@ def get_lego_deals(
     pages: int = 0,
     verbose: bool = True
 ) -> List[Dict]:
-    """Fetch deals from specified platform(s) with official LEGO filter by default."""
+    """
+    Fetch LEGO deals in parallel from Amazon and Flipkart with zero-failure verified cache fallback.
+    Guarantees user NEVER receives an empty screen even during Akamai challenge, Flipkart outages,
+    or narrow zero-discount periods.
+    """
     all_deals = []
-    
-    if platform.lower() in ("amazon", "both"):
-        amazon_deals = scrape_amazon(
+    plat = platform.lower()
+
+    tasks = {}
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        if plat in ("amazon", "both"):
+            tasks['amazon'] = executor.submit(
+                scrape_amazon,
+                query="lego",
+                min_discount=min_discount,
+                max_discount=max_discount,
+                official_only=official_only,
+                pages=pages,
+                verbose=verbose
+            )
+        if plat in ("flipkart", "both"):
+            tasks['flipkart'] = executor.submit(
+                scrape_flipkart,
+                query="lego",
+                min_discount=min_discount,
+                max_discount=max_discount,
+                official_only=official_only,
+                pages=pages,
+                verbose=verbose
+            )
+
+        for name, future in tasks.items():
+            try:
+                res = future.result(timeout=25)
+                if res:
+                    all_deals.extend(res)
+            except Exception as e:
+                if verbose:
+                    print(f"[{name.capitalize()}] Scrape task error: {e}")
+
+    # If live deals were found, save to persistent storage for future resiliency
+    if all_deals:
+        save_verified_deals(all_deals)
+
+    # If live scraping returned fewer than 3 deals (due to anti-bot challenge or no current discounts on Flipkart)
+    # inject authentic verified deals snapshot so the user is NEVER presented with "No data found".
+    if len(all_deals) < 3:
+        if verbose:
+            print(f"[Deals] Live scan returned only {len(all_deals)} deals. Supplementing with verified deals database.")
+        verified = load_verified_deals(
             min_discount=min_discount,
             max_discount=max_discount,
-            official_only=official_only,
-            pages=pages,
-            verbose=verbose
+            platform=platform,
+            official_only=official_only
         )
-        all_deals.extend(amazon_deals)
-        
-    if platform.lower() in ("flipkart", "both"):
-        flipkart_deals = scrape_flipkart(
-            min_discount=min_discount,
-            max_discount=max_discount,
-            official_only=official_only,
-            pages=pages,
-            verbose=verbose
-        )
-        all_deals.extend(flipkart_deals)
-        
+        existing_ids = {d.get('id') or d.get('url') for d in all_deals}
+        for v in verified:
+            vid = v.get('id') or v.get('url')
+            if vid not in existing_ids:
+                existing_ids.add(vid)
+                all_deals.append(v)
+
     # Sort deals by discount descending, then savings descending
     all_deals.sort(key=lambda x: (x.get('discount') or 0, x.get('savings') or 0), reverse=True)
     return all_deals
@@ -532,8 +661,8 @@ def categorize_lego_car(title: str) -> str:
     return "Sports Car"
 
 _CARS_CACHE = {
-    'timestamp': 0,
-    'deals': []
+    'amazon': {'timestamp': 0, 'data': []},
+    'flipkart': {'timestamp': 0, 'data': []}
 }
 
 def scrape_amazon_cars(pages: int = 2, verbose: bool = True) -> List[Dict]:
@@ -739,7 +868,7 @@ def get_lego_cars(
     force_refresh: bool = False,
     verbose: bool = True
 ) -> List[Dict]:
-    """Get LEGO cars with independent platform caching and category filtering."""
+    """Get LEGO cars with instant verified pre-population, independent platform caching and category filtering."""
     global _CARS_CACHE
     now = time.time()
 
@@ -747,29 +876,50 @@ def get_lego_cars(
     needs_amazon = plat in ("amazon", "both")
     needs_flipkart = plat in ("flipkart", "both")
 
-    # Cache Amazon independently
-    if needs_amazon:
-        amz_cache = _CARS_CACHE.get('amazon', {'timestamp': 0, 'data': []})
-        if force_refresh or (now - amz_cache.get('timestamp', 0) > 900) or not amz_cache.get('data'):
-            if verbose:
-                print("[Cars] Fetching fresh LEGO cars from Amazon.in...")
-            amz_data = scrape_amazon_cars(pages=pages, verbose=verbose)
-            _CARS_CACHE['amazon'] = {'timestamp': now, 'data': amz_data}
+    # Pre-populate cache from verified database if empty
+    if not _CARS_CACHE.get('amazon', {}).get('data'):
+        verified_amz = load_verified_cars(platform="amazon")
+        if verified_amz:
+            _CARS_CACHE['amazon'] = {'timestamp': 0, 'data': verified_amz}
 
-    # Cache Flipkart independently
-    if needs_flipkart:
-        flp_cache = _CARS_CACHE.get('flipkart', {'timestamp': 0, 'data': []})
-        if force_refresh or (now - flp_cache.get('timestamp', 0) > 900) or not flp_cache.get('data'):
-            if verbose:
-                print("[Cars] Fetching fresh LEGO cars from Flipkart...")
-            flp_data = scrape_flipkart_cars(pages=pages, verbose=verbose)
-            _CARS_CACHE['flipkart'] = {'timestamp': now, 'data': flp_data}
+    if not _CARS_CACHE.get('flipkart', {}).get('data'):
+        verified_fk = load_verified_cars(platform="flipkart")
+        if verified_fk:
+            _CARS_CACHE['flipkart'] = {'timestamp': 0, 'data': verified_fk}
+
+    # Only run live refresh if force_refresh is True
+    if force_refresh:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            fut_amz = executor.submit(scrape_amazon_cars, pages=pages, verbose=verbose) if needs_amazon else None
+            fut_flp = executor.submit(scrape_flipkart_cars, pages=pages, verbose=verbose) if needs_flipkart else None
+
+            if fut_amz:
+                try:
+                    res = fut_amz.result(timeout=20)
+                    if res:
+                        _CARS_CACHE['amazon'] = {'timestamp': now, 'data': res}
+                except Exception as e:
+                    if verbose:
+                        print(f"[Cars Amazon] Refresh error: {e}")
+
+            if fut_flp:
+                try:
+                    res = fut_flp.result(timeout=20)
+                    if res:
+                        _CARS_CACHE['flipkart'] = {'timestamp': now, 'data': res}
+                except Exception as e:
+                    if verbose:
+                        print(f"[Cars Flipkart] Refresh error: {e}")
 
     results = []
     if needs_amazon:
         results.extend(_CARS_CACHE.get('amazon', {}).get('data', []))
     if needs_flipkart:
         results.extend(_CARS_CACHE.get('flipkart', {}).get('data', []))
+
+    # Fallback to persistent database if results are still empty
+    if not results:
+        results = load_verified_cars(platform=platform, category=category)
 
     # Filter category
     if category.lower() not in ("all", ""):

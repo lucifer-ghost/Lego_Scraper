@@ -290,19 +290,42 @@ export default function CarsSectionView() {
             <h3>No Cars Found Matching "{searchQuery || category}"</h3>
             <p>
               {searchQuery
-                ? `No models found matching "${searchQuery}". Try a different keyword or click clear.`
-                : 'Try clicking "All Cars" or switching the store section above.'}
+                ? `No models found matching "${searchQuery}". Try a different keyword or click below to restore full catalog:`
+                : 'Try viewing all cars or switching the store section above:'}
             </p>
-            {searchQuery && (
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '16px' }}>
               <button
                 type="button"
-                className="btn-outline"
-                style={{ marginTop: 14 }}
-                onClick={() => setSearchQuery('')}
+                className="compact-chip-btn active"
+                onClick={() => {
+                  setSearchQuery('');
+                  setCategory('all');
+                }}
               >
-                Clear Search Filter
+                🏎️ View All Cars
               </button>
-            )}
+              {store !== 'amazon' && (
+                <button
+                  type="button"
+                  className="compact-seg-btn active-amazon"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setStore('amazon');
+                  }}
+                >
+                  🛒 Switch to Amazon.in
+                </button>
+              )}
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => setSearchQuery('')}
+                >
+                  Clear "{searchQuery}"
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           sortedCars.map((car) => {

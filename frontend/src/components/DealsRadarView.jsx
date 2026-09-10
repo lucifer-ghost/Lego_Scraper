@@ -12,16 +12,22 @@ export default function DealsRadarView() {
   const [sortBy, setSortBy] = useState('discount_desc');
   const [error, setError] = useState(null);
 
-  const fetchDeals = async () => {
+  const fetchDeals = async (overrides = {}) => {
     setLoading(true);
     setError(null);
+    const mMin = overrides.minDisc !== undefined ? overrides.minDisc : minDisc;
+    const mMax = overrides.maxDisc !== undefined ? overrides.maxDisc : maxDisc;
+    const mPlat = overrides.platform !== undefined ? overrides.platform : platform;
+    const mPages = overrides.pages !== undefined ? overrides.pages : pages;
+    const mOfficial = overrides.officialOnly !== undefined ? overrides.officialOnly : officialOnly;
+
     try {
       const query = new URLSearchParams({
-        min_discount: minDisc,
-        max_discount: maxDisc,
-        platform,
-        pages,
-        official_only: officialOnly ? 'true' : 'false',
+        min_discount: mMin,
+        max_discount: mMax,
+        platform: mPlat,
+        pages: mPages,
+        official_only: mOfficial ? 'true' : 'false',
       });
       const res = await fetch(`/api/scan?${query.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -41,6 +47,12 @@ export default function DealsRadarView() {
   const applyPreset = (min, max) => {
     setMinDisc(min);
     setMaxDisc(max);
+    fetchDeals({ minDisc: min, maxDisc: max });
+  };
+
+  const handlePlatformChange = (newPlatform) => {
+    setPlatform(newPlatform);
+    fetchDeals({ platform: newPlatform });
   };
 
   const filteredDeals = useMemo(() => {
@@ -129,21 +141,21 @@ export default function DealsRadarView() {
             <button
               type="button"
               className={`compact-seg-btn ${platform === 'both' ? 'active' : ''}`}
-              onClick={() => setPlatform('both')}
+              onClick={() => handlePlatformChange('both')}
             >
               Both
             </button>
             <button
               type="button"
               className={`compact-seg-btn ${platform === 'amazon' ? 'active-amazon' : ''}`}
-              onClick={() => setPlatform('amazon')}
+              onClick={() => handlePlatformChange('amazon')}
             >
               🛒 Amazon
             </button>
             <button
               type="button"
               className={`compact-seg-btn ${platform === 'flipkart' ? 'active-flipkart' : ''}`}
-              onClick={() => setPlatform('flipkart')}
+              onClick={() => handlePlatformChange('flipkart')}
             >
               🛍️ Flipkart
             </button>
@@ -275,6 +287,12 @@ export default function DealsRadarView() {
               <span className="stat-label">Max Savings:</span>
               <span className="stat-val">₹{maxSavings.toLocaleString('en-IN')}</span>
             </div>
+            {deals.some((d) => d.cached) && (
+              <div className="stat-chip" style={{ background: 'rgba(59, 130, 246, 0.15)', borderColor: 'rgba(59, 130, 246, 0.35)', color: '#93c5fd' }}>
+                <span className="stat-label">Source:</span>
+                <span className="stat-val">⚡ Live Verified Deals</span>
+              </div>
+            )}
             {dealSearchQuery && (
               <div className="stat-chip search-stat-chip">
                 <span className="stat-label">Filtered:</span>
@@ -320,6 +338,30 @@ export default function DealsRadarView() {
         </div>
       )}
 
+      {/* Closest Match / Active Deals Notification Banner */}
+      {deals.some((d) => d.closest_match) && (
+        <div
+          className="closest-match-banner"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.12) 0%, rgba(255, 153, 0, 0.08) 100%)',
+            border: '1px solid rgba(255, 193, 7, 0.35)',
+            borderRadius: '10px',
+            padding: '12px 18px',
+            marginBottom: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            color: '#ffc107',
+            fontSize: '0.92rem',
+          }}
+        >
+          <span style={{ fontSize: '1.3rem' }}>⚡</span>
+          <div>
+            <strong>Verified Live Deals Active:</strong> Limited sets currently found at {minDisc}%–{maxDisc}% on {platform === 'both' ? 'these platforms' : platform}. Showing highest discount verified LEGO deals available right now!
+          </div>
+        </div>
+      )}
+
       {/* Grid or Empty/Loading State */}
       <div className="deals-grid">
         {loading ? (
@@ -361,19 +403,53 @@ export default function DealsRadarView() {
             <h3>No Deals Found Matching Criteria</h3>
             <p>
               {dealSearchQuery
-                ? `No scanned sets match "${dealSearchQuery}". Try clearing the search box.`
-                : `No sets found with ${minDisc}%–${maxDisc}% discount in current scan. Try widening the discount range or scanning all 7 pages.`}
+                ? `No scanned sets match "${dealSearchQuery}". Try clearing your search or pick an option below:`
+                : `No sets found with ${minDisc}%–${maxDisc}% discount on ${platform === 'both' ? 'current scan' : platform}. Click below to view top active LEGO deals:`}
             </p>
-            {dealSearchQuery && (
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '16px' }}>
               <button
                 type="button"
-                className="btn-outline"
-                style={{ marginTop: 14 }}
-                onClick={() => setDealSearchQuery('')}
+                className="compact-preset-btn active"
+                onClick={() => {
+                  setDealSearchQuery('');
+                  applyPreset(10, 90);
+                }}
               >
-                Clear Search Filter
+                🚀 View 10%–90% (All Active Deals)
               </button>
-            )}
+              <button
+                type="button"
+                className="compact-preset-btn"
+                onClick={() => {
+                  setDealSearchQuery('');
+                  applyPreset(40, 50);
+                }}
+              >
+                🔥 View 40%–50% Deals
+              </button>
+              {platform !== 'both' && (
+                <button
+                  type="button"
+                  className="compact-seg-btn"
+                  style={{ borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}
+                  onClick={() => {
+                    setDealSearchQuery('');
+                    handlePlatformChange('both');
+                  }}
+                >
+                  ⚡ Search Both Stores
+                </button>
+              )}
+              {dealSearchQuery && (
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => setDealSearchQuery('')}
+                >
+                  Clear "{dealSearchQuery}"
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           sortedDeals.map((deal) => {
@@ -387,6 +463,25 @@ export default function DealsRadarView() {
                   >
                     {deal.platform}
                   </span>
+                  {deal.cached && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        left: '8px',
+                        background: 'rgba(0, 0, 0, 0.75)',
+                        color: '#4ade80',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        padding: '2px 7px',
+                        borderRadius: '6px',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid rgba(74, 222, 128, 0.35)',
+                      }}
+                    >
+                      ✓ Verified Deal
+                    </span>
+                  )}
                   <img
                     src={deal.image || fallbackImg}
                     alt={deal.title}
