@@ -1,21 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
 export default function CarsSectionView() {
-  const [store, setStore] = useState('amazon');
+  const [store, setStore] = useState('both');
   const [category, setCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [cars, setCars] = useState([]);
   const [sortBy, setSortBy] = useState('featured');
   const [error, setError] = useState(null);
-
-  const categories = [
-    { id: 'all', label: '🏎️ All Cars' },
-    { id: 'formula 1', label: '🏁 Formula 1 (F1)' },
-    { id: 'supercar', label: '🚀 Supercars' },
-    { id: 'technic', label: '⚙️ Technic Cars' },
-    { id: 'movie & iconic', label: '🎬 Movie & Iconic' },
-  ];
 
   const quickSearchTags = [
     'F1',
@@ -31,13 +23,13 @@ export default function CarsSectionView() {
     'Skyline',
   ];
 
-  const fetchCars = async (forceRefresh = false) => {
+  const fetchCars = async (targetStore = store, forceRefresh = false) => {
     setLoading(true);
     setError(null);
     try {
       const query = new URLSearchParams({
-        platform: store,
-        category,
+        platform: targetStore,
+        category: 'all',
         refresh: forceRefresh ? 'true' : 'false',
         pages: '2',
       });
@@ -53,19 +45,49 @@ export default function CarsSectionView() {
   };
 
   useEffect(() => {
-    fetchCars();
-  }, [store, category]);
+    fetchCars(store);
+  }, [store]);
+
+  const handleStoreChange = (newStore) => {
+    setStore(newStore);
+    fetchCars(newStore);
+  };
+
+  const categoryCounts = useMemo(() => {
+    return {
+      all: cars.length,
+      'formula 1': cars.filter((c) => (c.category || '').toLowerCase() === 'formula 1').length,
+      supercar: cars.filter((c) => (c.category || '').toLowerCase() === 'supercar').length,
+      technic: cars.filter((c) => (c.category || '').toLowerCase() === 'technic').length,
+      'movie & iconic': cars.filter((c) => (c.category || '').toLowerCase() === 'movie & iconic').length,
+    };
+  }, [cars]);
+
+  const categories = [
+    { id: 'all', label: `🏎️ All Cars (${categoryCounts.all || 0})` },
+    { id: 'formula 1', label: `🏁 Formula 1 (${categoryCounts['formula 1'] || 0})` },
+    { id: 'supercar', label: `🚀 Supercars (${categoryCounts.supercar || 0})` },
+    { id: 'technic', label: `⚙️ Technic (${categoryCounts.technic || 0})` },
+    { id: 'movie & iconic', label: `🎬 Movie & Iconic (${categoryCounts['movie & iconic'] || 0})` },
+  ];
 
   const filteredCars = useMemo(() => {
-    if (!searchQuery.trim()) return cars;
-    const q = searchQuery.toLowerCase().trim();
-    return cars.filter((car) => {
-      const title = (car.title || '').toLowerCase();
-      const cat = (car.category || '').toLowerCase();
-      const platform = (car.platform || '').toLowerCase();
-      return title.includes(q) || cat.includes(q) || platform.includes(q);
-    });
-  }, [cars, searchQuery]);
+    let list = cars;
+    if (category !== 'all') {
+      const catLow = category.toLowerCase();
+      list = list.filter((c) => (c.category || '').toLowerCase() === catLow);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter((car) => {
+        const title = (car.title || '').toLowerCase();
+        const cat = (car.category || '').toLowerCase();
+        const platform = (car.platform || '').toLowerCase();
+        return title.includes(q) || cat.includes(q) || platform.includes(q);
+      });
+    }
+    return list;
+  }, [cars, category, searchQuery]);
 
   const sortedCars = useMemo(() => {
     return [...filteredCars].sort((a, b) => {
@@ -76,49 +98,90 @@ export default function CarsSectionView() {
     });
   }, [filteredCars, sortBy]);
 
-  const fallbackImg = 'https://images.unsplash.com/photo-1585366119957-e9730b6d0f60?w=500&auto=format&fit=crop&q=60';
+  const fallbackImg = 'https://m.media-amazon.com/images/I/81A19lSMmcL._AC_UL320_.jpg';
 
   return (
     <div className="cars-view-container">
-      {/* Compact, Small Controls Panel */}
+      {/* Overview Hero Showcase Banner */}
+      <div className="cars-hero-banner">
+        <div className="hero-content">
+          <div className="hero-badge">
+            <span className="live-dot"></span>
+            OFFICIAL LEGO RACING PADDOCK
+          </div>
+          <h2 className="hero-title">LEGO Cars & F1 Speed Champions</h2>
+          <p className="hero-desc">
+            Explore authentic Formula 1 team racers (Oracle Red Bull RB20, Ferrari SF-24, McLaren, Mercedes-AMG W15), Technic supercars, and iconic cinema builds with verified live pricing across Amazon India & Flipkart.
+          </p>
+          <div className="hero-stats">
+            <div className="hero-stat">
+              <strong>{categoryCounts['formula 1'] || 45}</strong>
+              <span>🏁 F1 Racers</span>
+            </div>
+            <div className="hero-stat">
+              <strong>{categoryCounts.supercar || 40}</strong>
+              <span>🚀 Supercars</span>
+            </div>
+            <div className="hero-stat">
+              <strong>{categoryCounts.technic || 35}</strong>
+              <span>⚙️ Technic</span>
+            </div>
+            <div className="hero-stat">
+              <strong>{cars.length || 150}</strong>
+              <span>⚡ Total Models</span>
+            </div>
+          </div>
+        </div>
+        <div className="hero-visual">
+          <img
+            src="https://m.media-amazon.com/images/I/81A19lSMmcL._AC_UL600_.jpg"
+            alt="LEGO Speed Champions Oracle Red Bull Racing RB20 F1"
+            className="hero-car-img"
+            loading="eager"
+            referrerPolicy="no-referrer"
+          />
+          <div className="hero-car-glow"></div>
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
       <div className="compact-filter-bar car-filter-bar">
         {/* Row 1: Header + Store Switcher */}
         <div className="filter-row-top">
           <div className="compact-title-group">
             <span className="compact-tag-racing">🏁 F1 & SUPERCARS</span>
-            <h3 className="compact-heading">LEGO Cars Catalog</h3>
+            <h3 className="compact-heading">Filter Garage</h3>
           </div>
 
-          {/* Platform Segmented Switch - Amazon is DEFAULT */}
+          {/* Platform Segmented Switch */}
           <div className="compact-segment">
             <button
               type="button"
+              className={`compact-seg-btn ${store === 'both' ? 'active' : ''}`}
+              onClick={() => handleStoreChange('both')}
+              title="Search LEGO cars across both stores"
+            >
+              <span>⚡ Both Stores</span>
+            </button>
+            <button
+              type="button"
               className={`compact-seg-btn ${store === 'amazon' ? 'active-amazon' : ''}`}
-              onClick={() => setStore('amazon')}
+              onClick={() => handleStoreChange('amazon')}
               title="Search LEGO cars on Amazon India"
             >
               <span>🛒 Amazon.in</span>
-              <span className="default-mini-pill">DEFAULT</span>
             </button>
             <button
               type="button"
               className={`compact-seg-btn ${store === 'flipkart' ? 'active-flipkart' : ''}`}
-              onClick={() => setStore('flipkart')}
+              onClick={() => handleStoreChange('flipkart')}
               title="Search LEGO cars on Flipkart"
             >
               <span>🛍️ Flipkart</span>
             </button>
-            <button
-              type="button"
-              className={`compact-seg-btn ${store === 'both' ? 'active' : ''}`}
-              onClick={() => setStore('both')}
-              title="Search LEGO cars across both stores"
-            >
-              <span>⚡ Both</span>
-            </button>
           </div>
 
-          {/* Category Quick Chips in Row 1 if space permits */}
+          {/* Category Quick Chips */}
           <div className="compact-category-pills">
             {categories.map((c) => (
               <button
@@ -140,7 +203,7 @@ export default function CarsSectionView() {
             <input
               type="text"
               className="compact-search-input"
-              placeholder="Search F1, Red Bull, Ferrari, Technic, Batmobile, set #..."
+              placeholder="Search F1, Red Bull, Ferrari, McLaren, Mercedes, Technic, Batmobile, Skyline..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -196,8 +259,8 @@ export default function CarsSectionView() {
           </div>
 
           <div className="stat-chip">
-            <span className="stat-label">Total Cars:</span>
-            <span className="stat-val">{cars.length}</span>
+            <span className="stat-label">Matching Cars:</span>
+            <span className="stat-val">{filteredCars.length}</span>
           </div>
 
           {searchQuery && (
@@ -243,9 +306,9 @@ export default function CarsSectionView() {
           <button
             type="button"
             className="btn-outline"
-            onClick={() => fetchCars(true)}
+            onClick={() => fetchCars(store, true)}
             disabled={loading}
-            title="Fetch fresh results from store"
+            title="Fetch fresh live results from store"
           >
             <span>🔄</span> Refresh
           </button>
@@ -279,7 +342,7 @@ export default function CarsSectionView() {
               type="button"
               className="compact-scan-btn"
               style={{ marginTop: 14, background: '#ef4444' }}
-              onClick={() => fetchCars(true)}
+              onClick={() => fetchCars(store, true)}
             >
               Retry Connection
             </button>
@@ -302,18 +365,28 @@ export default function CarsSectionView() {
                   setCategory('all');
                 }}
               >
-                🏎️ View All Cars
+                🏎️ View All Cars ({categoryCounts.all})
               </button>
-              {store !== 'amazon' && (
+              <button
+                type="button"
+                className="compact-chip-btn"
+                onClick={() => {
+                  setSearchQuery('');
+                  setCategory('formula 1');
+                }}
+              >
+                🏁 View Formula 1 ({categoryCounts['formula 1']})
+              </button>
+              {store !== 'both' && (
                 <button
                   type="button"
-                  className="compact-seg-btn active-amazon"
+                  className="compact-seg-btn active"
                   onClick={() => {
                     setSearchQuery('');
-                    setStore('amazon');
+                    handleStoreChange('both');
                   }}
                 >
-                  🛒 Switch to Amazon.in
+                  ⚡ View Both Stores
                 </button>
               )}
               {searchQuery && (
@@ -348,6 +421,7 @@ export default function CarsSectionView() {
                     src={car.image || fallbackImg}
                     alt={car.title}
                     loading="lazy"
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
                       e.target.src = fallbackImg;
                     }}

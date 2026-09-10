@@ -100,8 +100,7 @@ export default function DealsRadarView() {
     ? Math.round(deals.reduce((s, d) => s + (d.discount || 0), 0) / deals.length)
     : 0;
   const maxSavings = deals.length ? Math.max(...deals.map((d) => d.savings || 0)) : 0;
-  const fallbackImg =
-    'https://images.unsplash.com/photo-1585366119957-e9730b6d0f60?w=500&auto=format&fit=crop&q=60';
+  const fallbackImg = 'https://m.media-amazon.com/images/I/81A19lSMmcL._AC_UL320_.jpg';
 
   return (
     <div className="deals-radar-container">
@@ -486,6 +485,7 @@ export default function DealsRadarView() {
                     src={deal.image || fallbackImg}
                     alt={deal.title}
                     loading="lazy"
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
                       e.target.src = fallbackImg;
                     }}
