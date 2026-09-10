@@ -38,7 +38,7 @@ export default function Navbar({ activeTab, onTabChange }) {
             rel="noopener noreferrer"
             className="direct-btn direct-amazon"
           >
-            <span>🛒 Amazon Deals</span> ↗
+            <span>🛒 Amazon</span> ↗
           </a>
           <a
             href="https://www.flipkart.com/search?q=lego&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore"
@@ -46,7 +46,23 @@ export default function Navbar({ activeTab, onTabChange }) {
             rel="noopener noreferrer"
             className="direct-btn direct-flipkart"
           >
-            <span>🛍️ Flipkart Deals</span> ↗
+            <span>🛍️ Flipkart</span> ↗
+          </a>
+          <a
+            href="https://hamleys.in/products?brand=lego"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="direct-btn direct-hamleys"
+          >
+            <span>🧸 Hamleys</span> ↗
+          </a>
+          <a
+            href="https://lego.mybrickhouse.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="direct-btn direct-mybrickhouse"
+          >
+            <span>🧱 MyBrickHouse</span> ↗
           </a>
         </div>
       </div>

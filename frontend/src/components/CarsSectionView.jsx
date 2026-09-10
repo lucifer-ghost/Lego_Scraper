@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
 export default function CarsSectionView() {
-  const [store, setStore] = useState('both');
+  const [store, setStore] = useState('all');
   const [category, setCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -111,7 +111,7 @@ export default function CarsSectionView() {
           </div>
           <h2 className="hero-title">LEGO Cars & F1 Speed Champions</h2>
           <p className="hero-desc">
-            Explore authentic Formula 1 team racers (Oracle Red Bull RB20, Ferrari SF-24, McLaren, Mercedes-AMG W15), Technic supercars, and iconic cinema builds with verified live pricing across Amazon India & Flipkart.
+            Explore authentic Formula 1 team racers (Oracle Red Bull RB20, Ferrari SF-24, McLaren, Mercedes-AMG W15), Technic supercars, and iconic cinema builds with verified live pricing across Amazon, Flipkart, Hamleys & MyBrickHouse.
           </p>
           <div className="hero-stats">
             <div className="hero-stat">
@@ -157,11 +157,11 @@ export default function CarsSectionView() {
           <div className="compact-segment">
             <button
               type="button"
-              className={`compact-seg-btn ${store === 'both' ? 'active' : ''}`}
-              onClick={() => handleStoreChange('both')}
-              title="Search LEGO cars across both stores"
+              className={`compact-seg-btn ${store === 'all' || store === 'both' ? 'active' : ''}`}
+              onClick={() => handleStoreChange('all')}
+              title="Search LEGO cars across all stores"
             >
-              <span>⚡ Both Stores</span>
+              <span>⚡ All Stores</span>
             </button>
             <button
               type="button"
@@ -178,6 +178,22 @@ export default function CarsSectionView() {
               title="Search LEGO cars on Flipkart"
             >
               <span>🛍️ Flipkart</span>
+            </button>
+            <button
+              type="button"
+              className={`compact-seg-btn ${store === 'hamleys' ? 'active-hamleys' : ''}`}
+              onClick={() => handleStoreChange('hamleys')}
+              title="Search LEGO cars on Hamleys India"
+            >
+              <span>🧸 Hamleys</span>
+            </button>
+            <button
+              type="button"
+              className={`compact-seg-btn ${store === 'mybrickhouse' ? 'active-mybrickhouse' : ''}`}
+              onClick={() => handleStoreChange('mybrickhouse')}
+              title="Search LEGO cars on MyBrickHouse India"
+            >
+              <span>🧱 MyBrickHouse</span>
             </button>
           </div>
 
@@ -251,10 +267,22 @@ export default function CarsSectionView() {
                     ? 'var(--amazon-orange)'
                     : store === 'flipkart'
                     ? 'var(--flipkart-blue)'
+                    : store === 'hamleys'
+                    ? '#fb7185'
+                    : store === 'mybrickhouse'
+                    ? '#2dd4bf'
                     : '#fff',
               }}
             >
-              {store === 'amazon' ? 'Amazon.in' : store === 'flipkart' ? 'Flipkart' : 'All Stores'}
+              {store === 'amazon'
+                ? 'Amazon.in'
+                : store === 'flipkart'
+                ? 'Flipkart'
+                : store === 'hamleys'
+                ? 'Hamleys'
+                : store === 'mybrickhouse'
+                ? 'MyBrickHouse'
+                : 'All Stores'}
             </span>
           </div>
 
@@ -330,7 +358,7 @@ export default function CarsSectionView() {
                 margin: '0 auto 16px',
               }}
             ></div>
-            <h3>Loading LEGO Cars on {store === 'amazon' ? 'Amazon India' : store === 'flipkart' ? 'Flipkart' : 'both platforms'}...</h3>
+            <h3>Loading LEGO Cars on {store === 'amazon' ? 'Amazon India' : store === 'flipkart' ? 'Flipkart' : store === 'hamleys' ? 'Hamleys' : store === 'mybrickhouse' ? 'MyBrickHouse' : 'all 4 platforms'}...</h3>
             <p>Fetching Formula 1, Speed Champions, and Technic supercar models.</p>
           </div>
         ) : error ? (
@@ -377,16 +405,16 @@ export default function CarsSectionView() {
               >
                 🏁 View Formula 1 ({categoryCounts['formula 1']})
               </button>
-              {store !== 'both' && (
+              {store !== 'all' && store !== 'both' && (
                 <button
                   type="button"
                   className="compact-seg-btn active"
                   onClick={() => {
                     setSearchQuery('');
-                    handleStoreChange('both');
+                    handleStoreChange('all');
                   }}
                 >
-                  ⚡ View Both Stores
+                  ⚡ View All Stores
                 </button>
               )}
               {searchQuery && (
@@ -403,6 +431,34 @@ export default function CarsSectionView() {
         ) : (
           sortedCars.map((car) => {
             const isAmazon = car.platform === 'Amazon.in';
+            const isFlipkart = car.platform === 'Flipkart';
+            const isHamleys = car.platform === 'Hamleys';
+            const isMyBrickHouse = car.platform === 'MyBrickHouse';
+
+            const badgeClass = isAmazon
+              ? 'badge-amazon'
+              : isFlipkart
+              ? 'badge-flipkart'
+              : isHamleys
+              ? 'badge-hamleys'
+              : 'badge-mybrickhouse';
+
+            const buyBtnStyle = isAmazon
+              ? { background: 'rgba(255,153,0,0.15)', borderColor: 'rgba(255,153,0,0.4)', color: '#fff' }
+              : isFlipkart
+              ? { background: 'rgba(40,116,240,0.15)', borderColor: 'rgba(40,116,240,0.4)', color: '#fff' }
+              : isHamleys
+              ? { background: 'rgba(225,29,72,0.15)', borderColor: 'rgba(225,29,72,0.4)', color: '#fff' }
+              : { background: 'rgba(13,148,136,0.15)', borderColor: 'rgba(13,148,136,0.4)', color: '#fff' };
+
+            const storeLabel = isAmazon
+              ? 'Amazon'
+              : isFlipkart
+              ? 'Flipkart'
+              : isHamleys
+              ? 'Hamleys'
+              : 'MyBrickHouse';
+
             return (
               <div className="deal-card" key={car.id || car.url}>
                 <div className="card-thumb">
@@ -410,7 +466,7 @@ export default function CarsSectionView() {
                     <span className="badge-discount">{car.discount}% OFF</span>
                   )}
                   <span
-                    className={`badge-platform ${isAmazon ? 'badge-amazon' : 'badge-flipkart'}`}
+                    className={`badge-platform ${badgeClass}`}
                   >
                     {car.platform}
                   </span>
@@ -451,13 +507,9 @@ export default function CarsSectionView() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-buy"
-                      style={{
-                        background: isAmazon ? 'rgba(255,153,0,0.15)' : 'rgba(40,116,240,0.15)',
-                        borderColor: isAmazon ? 'rgba(255,153,0,0.4)' : 'rgba(40,116,240,0.4)',
-                        color: '#fff',
-                      }}
+                      style={buyBtnStyle}
                     >
-                      Buy on {isAmazon ? 'Amazon' : 'Flipkart'} ↗
+                      Buy on {storeLabel} ↗
                     </a>
                   </div>
                 </div>

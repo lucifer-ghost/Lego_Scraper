@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 export default function DealsRadarView() {
   const [minDisc, setMinDisc] = useState(40);
   const [maxDisc, setMaxDisc] = useState(50);
-  const [platform, setPlatform] = useState('both');
+  const [platform, setPlatform] = useState('all');
   const [pages, setPages] = useState('all');
   const [officialOnly, setOfficialOnly] = useState(true);
   const [dealSearchQuery, setDealSearchQuery] = useState('');
@@ -139,10 +139,10 @@ export default function DealsRadarView() {
           <div className="compact-segment">
             <button
               type="button"
-              className={`compact-seg-btn ${platform === 'both' ? 'active' : ''}`}
-              onClick={() => handlePlatformChange('both')}
+              className={`compact-seg-btn ${platform === 'all' || platform === 'both' ? 'active' : ''}`}
+              onClick={() => handlePlatformChange('all')}
             >
-              Both
+              ⚡ All Stores
             </button>
             <button
               type="button"
@@ -157,6 +157,20 @@ export default function DealsRadarView() {
               onClick={() => handlePlatformChange('flipkart')}
             >
               🛍️ Flipkart
+            </button>
+            <button
+              type="button"
+              className={`compact-seg-btn ${platform === 'hamleys' ? 'active-hamleys' : ''}`}
+              onClick={() => handlePlatformChange('hamleys')}
+            >
+              🧸 Hamleys
+            </button>
+            <button
+              type="button"
+              className={`compact-seg-btn ${platform === 'mybrickhouse' ? 'active-mybrickhouse' : ''}`}
+              onClick={() => handlePlatformChange('mybrickhouse')}
+            >
+              🧱 MyBrickHouse
             </button>
           </div>
 
@@ -356,7 +370,7 @@ export default function DealsRadarView() {
         >
           <span style={{ fontSize: '1.3rem' }}>⚡</span>
           <div>
-            <strong>Verified Live Deals Active:</strong> Limited sets currently found at {minDisc}%–{maxDisc}% on {platform === 'both' ? 'these platforms' : platform}. Showing highest discount verified LEGO deals available right now!
+            <strong>Verified Live Deals Active:</strong> Limited sets currently found at {minDisc}%–{maxDisc}% on {platform === 'all' || platform === 'both' ? 'these platforms' : platform}. Showing highest discount verified LEGO deals available right now!
           </div>
         </div>
       )}
@@ -376,7 +390,7 @@ export default function DealsRadarView() {
                 margin: '0 auto 16px',
               }}
             ></div>
-            <h3>Scanning Amazon India & Flipkart for {minDisc}%–{maxDisc}% Discounts...</h3>
+            <h3>Scanning Amazon India, Flipkart, Hamleys & MyBrickHouse for {minDisc}%–{maxDisc}% Discounts...</h3>
             <p>
               Filtering for {officialOnly ? 'authentic LEGO official sets' : 'all building brick sets'}{' '}
               across {pages} pages.
@@ -403,7 +417,7 @@ export default function DealsRadarView() {
             <p>
               {dealSearchQuery
                 ? `No scanned sets match "${dealSearchQuery}". Try clearing your search or pick an option below:`
-                : `No sets found with ${minDisc}%–${maxDisc}% discount on ${platform === 'both' ? 'current scan' : platform}. Click below to view top active LEGO deals:`}
+                : `No sets found with ${minDisc}%–${maxDisc}% discount on ${platform === 'all' || platform === 'both' ? 'all 4 stores' : platform}. Click below to view top active LEGO deals:`}
             </p>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '16px' }}>
               <button
@@ -426,17 +440,17 @@ export default function DealsRadarView() {
               >
                 🔥 View 40%–50% Deals
               </button>
-              {platform !== 'both' && (
+              {platform !== 'all' && platform !== 'both' && (
                 <button
                   type="button"
                   className="compact-seg-btn"
                   style={{ borderColor: 'rgba(255,255,255,0.3)', color: '#fff' }}
                   onClick={() => {
                     setDealSearchQuery('');
-                    handlePlatformChange('both');
+                    handlePlatformChange('all');
                   }}
                 >
-                  ⚡ Search Both Stores
+                  ⚡ Search All 4 Stores
                 </button>
               )}
               {dealSearchQuery && (
@@ -453,12 +467,40 @@ export default function DealsRadarView() {
         ) : (
           sortedDeals.map((deal) => {
             const isAmazon = deal.platform === 'Amazon.in';
+            const isFlipkart = deal.platform === 'Flipkart';
+            const isHamleys = deal.platform === 'Hamleys';
+            const isMyBrickHouse = deal.platform === 'MyBrickHouse';
+
+            const badgeClass = isAmazon
+              ? 'badge-amazon'
+              : isFlipkart
+              ? 'badge-flipkart'
+              : isHamleys
+              ? 'badge-hamleys'
+              : 'badge-mybrickhouse';
+
+            const buyBtnStyle = isAmazon
+              ? { background: 'rgba(255,153,0,0.15)', borderColor: 'rgba(255,153,0,0.4)', color: '#fff' }
+              : isFlipkart
+              ? { background: 'rgba(40,116,240,0.15)', borderColor: 'rgba(40,116,240,0.4)', color: '#fff' }
+              : isHamleys
+              ? { background: 'rgba(225,29,72,0.15)', borderColor: 'rgba(225,29,72,0.4)', color: '#fff' }
+              : { background: 'rgba(13,148,136,0.15)', borderColor: 'rgba(13,148,136,0.4)', color: '#fff' };
+
+            const storeLabel = isAmazon
+              ? 'Amazon'
+              : isFlipkart
+              ? 'Flipkart'
+              : isHamleys
+              ? 'Hamleys'
+              : 'MyBrickHouse';
+
             return (
               <div className="deal-card" key={deal.id || deal.url}>
                 <div className="card-thumb">
                   <span className="badge-discount">{deal.discount}% OFF</span>
                   <span
-                    className={`badge-platform ${isAmazon ? 'badge-amazon' : 'badge-flipkart'}`}
+                    className={`badge-platform ${badgeClass}`}
                   >
                     {deal.platform}
                   </span>
@@ -513,13 +555,9 @@ export default function DealsRadarView() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-buy"
-                      style={{
-                        background: isAmazon ? 'rgba(255,153,0,0.15)' : 'rgba(40,116,240,0.15)',
-                        borderColor: isAmazon ? 'rgba(255,153,0,0.4)' : 'rgba(40,116,240,0.4)',
-                        color: '#fff',
-                      }}
+                      style={buyBtnStyle}
                     >
-                      Buy on {isAmazon ? 'Amazon' : 'Flipkart'} ↗
+                      Buy on {storeLabel} ↗
                     </a>
                   </div>
                 </div>

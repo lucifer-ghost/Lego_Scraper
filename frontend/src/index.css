@@ -173,6 +173,24 @@ header {
   background: rgba(40, 116, 240, 0.22);
 }
 
+.direct-hamleys {
+  background: rgba(225, 29, 72, 0.12);
+  color: #fb7185;
+  border: 1px solid rgba(225, 29, 72, 0.3);
+}
+.direct-hamleys:hover {
+  background: rgba(225, 29, 72, 0.22);
+}
+
+.direct-mybrickhouse {
+  background: rgba(13, 148, 136, 0.12);
+  color: #2dd4bf;
+  border: 1px solid rgba(13, 148, 136, 0.3);
+}
+.direct-mybrickhouse:hover {
+  background: rgba(13, 148, 136, 0.22);
+}
+
 /* Layout */
 .container {
   max-width: 1440px;
@@ -313,6 +331,18 @@ header {
   background: linear-gradient(135deg, #2874f0, #1b5ecc);
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(40, 116, 240, 0.4);
+}
+
+.compact-seg-btn.active-hamleys {
+  background: linear-gradient(135deg, #e11d48, #be123c);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.4);
+}
+
+.compact-seg-btn.active-mybrickhouse {
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(13, 148, 136, 0.4);
 }
 
 .default-mini-pill {
@@ -933,6 +963,14 @@ header {
 }
 .badge-flipkart {
   background: rgba(40, 116, 240, 0.9);
+  color: #fff;
+}
+.badge-hamleys {
+  background: rgba(225, 29, 72, 0.9);
+  color: #fff;
+}
+.badge-mybrickhouse {
+  background: rgba(13, 148, 136, 0.9);
   color: #fff;
 }
 

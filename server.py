@@ -58,7 +58,7 @@ class handler(BaseHTTPRequestHandler):
         if path == "/api/scan" or path.endswith("/api/scan"):
             min_disc = int(params.get("min_discount", ["40"])[0])
             max_disc = int(params.get("max_discount", ["50"])[0])
-            platform = params.get("platform", ["both"])[0]
+            platform = params.get("platform", ["all"])[0]
             pages_raw = params.get("pages", ["all"])[0]
             if str(pages_raw).lower() in ("all", "0", "auto"):
                 pages = 0  # 0 indicates auto-detect complete catalog
@@ -92,7 +92,7 @@ class handler(BaseHTTPRequestHandler):
 
         # 2. API: LEGO Cars & F1 Collection
         if path == "/api/cars" or path.endswith("/api/cars"):
-            platform = params.get("platform", ["both"])[0]
+            platform = params.get("platform", ["all"])[0]
             category = params.get("category", ["all"])[0]
             refresh = params.get("refresh", ["false"])[0].lower() in ("true", "1")
             pages = int(params.get("pages", ["2"])[0])
