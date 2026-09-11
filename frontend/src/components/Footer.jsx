@@ -4,36 +4,31 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="app-footer">
-      <div className="footer-compact-inner">
-        {/* Left: Brand Identity & Concise Info */}
-        <div className="footer-compact-left">
-          <div className="footer-brand-row">
-            <span className="footer-logo">🧱</span>
-            <span className="footer-title">LEGO Deal Radar</span>
-            <span className="footer-country-badge">India</span>
-          </div>
-          <p className="footer-compact-desc">
-            Autonomous multi-store intelligence across Amazon, Flipkart, Hamleys &amp; MyBrickHouse. Enthusiast tracker, not affiliated with the LEGO Group.
-          </p>
+    <footer className="app-footer app-footer-fixed" aria-label="Application Footer">
+      <div className="footer-bar-inner">
+        {/* Left: Compact Brand & Retailers */}
+        <div className="footer-bar-left">
+          <span className="footer-bar-logo">🧱</span>
+          <span className="footer-bar-title">LEGO Radar</span>
+          <span className="footer-bar-badge">India</span>
+          <span className="footer-bar-sep">•</span>
+          <span className="footer-bar-stores">Amazon • Flipkart • Hamleys • MyBrickHouse</span>
         </div>
 
-        {/* Right: Created by GHOST & Status */}
-        <div className="footer-compact-right">
-          <div className="creator-compact-badge">
+        {/* Right: Created by GHOST & System Pulse */}
+        <div className="footer-bar-right">
+          <div className="creator-bar-pill">
             <span className="creator-ghost-icon">👻</span>
-            <div className="creator-compact-text">
-              <span className="creator-sub">PROJECT ARCHITECT</span>
-              <span className="creator-name">
-                Created by <strong className="ghost-highlight">GHOST</strong>
-              </span>
-            </div>
+            <span className="creator-bar-text">
+              Created by <strong className="ghost-highlight">GHOST</strong>
+            </span>
             <span className="pulse-indicator" title="System Online &amp; Tracking" />
           </div>
-          <span className="footer-compact-copyright">© {currentYear} LEGO Radar</span>
+          <span className="footer-bar-copy">© {currentYear}</span>
         </div>
       </div>
     </footer>
   );
 }
+
 

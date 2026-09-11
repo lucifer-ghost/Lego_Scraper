@@ -81,52 +81,76 @@ def is_official_lego(title: str, item_text: str = "") -> bool:
     return True
 
 def load_verified_deals(min_discount: int = 0, max_discount: int = 100, platform: str = "both", official_only: bool = True) -> List[Dict]:
-    """Load verified deals snapshot from persistent cache as a zero-failure fallback."""
+    """Load verified deals snapshot from persistent cache as a zero-failure fallback.
+    Guarantees that when 'all' or 'both' stores are requested, ALL 4 Indian retailers
+    (Amazon.in, Flipkart, Hamleys, MyBrickHouse) are represented with verified deals.
+    """
     if not os.path.exists(VERIFIED_DEALS_FILE):
         return []
     try:
         with open(VERIFIED_DEALS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         
-        filtered = []
         plat = platform.lower()
-        for d in data:
-            d_plat = d.get('platform', '').lower()
-            if plat not in ("both", "all") and plat not in d_plat:
-                continue
-            raw_disc = d.get('discount', 0)
-            try:
-                disc = int(re.sub(r'[^\d]', '', str(raw_disc))) if re.sub(r'[^\d]', '', str(raw_disc)) else 0
-            except Exception:
-                disc = 0
-            if not (min_discount <= disc <= max_discount):
-                continue
-            if official_only and not (is_official_lego(d.get('title', '')) or d.get('platform') in ('Hamleys', 'MyBrickHouse')):
-                continue
-            d_copy = dict(d)
-            d_copy['cached'] = True
-            filtered.append(d_copy)
+        target_stores = ['Amazon.in', 'Flipkart', 'Hamleys', 'MyBrickHouse']
         
-        # If strict range yielded 0 items, expand slightly so user never gets an empty screen
-        if not filtered and data:
+        if plat not in ("both", "all"):
+            target_stores = [s for s in target_stores if plat in s.lower()]
+            if not target_stores:
+                target_stores = [platform]
+
+        combined_deals = []
+        seen_ids = set()
+
+        for store_name in target_stores:
+            store_items = []
+            store_matches = []
             for d in data:
-                d_plat = d.get('platform', '').lower()
-                if plat not in ("both", "all") and plat not in d_plat:
+                d_plat = d.get('platform', '')
+                if d_plat.lower() != store_name.lower() and store_name.lower() not in d_plat.lower():
                     continue
+                if official_only and not (is_official_lego(d.get('title', '')) or d_plat in ('Hamleys', 'MyBrickHouse')):
+                    continue
+                
+                # Check real discount
+                p = d.get('price')
+                m = d.get('mrp')
+                disc = d.get('discount') or 0
+                if p and m and m > p:
+                    calc = round((1 - p / m) * 100)
+                    if calc > disc and calc <= 85:
+                        disc = calc
+                
                 d_copy = dict(d)
+                d_copy['discount'] = disc
                 d_copy['cached'] = True
-                d_copy['closest_match'] = True
-                filtered.append(d_copy)
-            def _get_disc(x):
-                try:
-                    c = re.sub(r'[^\d]', '', str(x.get('discount', 0)))
-                    return int(c) if c else 0
-                except Exception:
-                    return 0
-            filtered.sort(key=_get_disc, reverse=True)
-            filtered = filtered[:20]
+                
+                store_items.append(d_copy)
+                if min_discount <= disc <= max_discount:
+                    store_matches.append(d_copy)
             
-        return filtered
+            # Sort store items by discount descending
+            store_matches.sort(key=lambda x: (x.get('discount') or 0, x.get('savings') or 0), reverse=True)
+            store_items.sort(key=lambda x: (x.get('discount') or 0, x.get('savings') or 0), reverse=True)
+
+            if store_matches:
+                for item in store_matches:
+                    uid = item.get('id') or item.get('url')
+                    if uid not in seen_ids:
+                        seen_ids.add(uid)
+                        combined_deals.append(item)
+            else:
+                # If store has deals outside the range (e.g. Hamleys max 25-30% on LEGO),
+                # provide top 15 deals with closest_match flag so the store is not missing!
+                for item in store_items[:15]:
+                    uid = item.get('id') or item.get('url')
+                    if uid not in seen_ids:
+                        seen_ids.add(uid)
+                        item['closest_match'] = True
+                        combined_deals.append(item)
+
+        combined_deals.sort(key=lambda x: (x.get('discount') or 0, x.get('savings') or 0), reverse=True)
+        return combined_deals
     except Exception as e:
         print(f"[Cache] Error loading verified deals: {e}")
         return []
@@ -837,22 +861,31 @@ def get_lego_deals(
     if all_deals:
         save_verified_deals(all_deals)
 
-    # If live scraping returned fewer than 3 deals, inject authentic verified deals snapshot
-    if len(all_deals) < 3:
-        if verbose:
-            print(f"[Deals] Live scan returned only {len(all_deals)} deals. Supplementing with verified deals database.")
-        verified = load_verified_deals(
-            min_discount=min_discount,
-            max_discount=max_discount,
-            platform=platform,
-            official_only=official_only
-        )
-        existing_ids = {d.get('id') or d.get('url') for d in all_deals}
-        for v in verified:
-            vid = v.get('id') or v.get('url')
-            if vid not in existing_ids:
-                existing_ids.add(vid)
-                all_deals.append(v)
+    # Guarantee multi-store representation: Every requested platform must have verified deals
+    target_stores = []
+    if needs_amazon: target_stores.append('Amazon.in')
+    if needs_flipkart: target_stores.append('Flipkart')
+    if needs_hamleys: target_stores.append('Hamleys')
+    if needs_mybrickhouse: target_stores.append('MyBrickHouse')
+
+    existing_ids = {d.get('id') or d.get('url') for d in all_deals}
+
+    for store_name in target_stores:
+        curr_count = sum(1 for d in all_deals if d.get('platform', '').lower() == store_name.lower())
+        if curr_count < 3:
+            if verbose:
+                print(f"[Deals] Store '{store_name}' has {curr_count} live deals. Supplementing from verified database...")
+            supp = load_verified_deals(
+                min_discount=min_discount,
+                max_discount=max_discount,
+                platform=store_name.lower().replace('.in', ''),
+                official_only=official_only
+            )
+            for v in supp:
+                vid = v.get('id') or v.get('url')
+                if vid not in existing_ids:
+                    existing_ids.add(vid)
+                    all_deals.append(v)
 
     # Sort deals by discount descending, then savings descending
     all_deals.sort(key=lambda x: (x.get('discount') or 0, x.get('savings') or 0), reverse=True)
