@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Navbar from './components/Navbar';
 import DealsRadarView from './components/DealsRadarView';
 import CarsSectionView from './components/CarsSectionView';
@@ -7,8 +7,16 @@ import ToastContainer from './components/Toast';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('cars');
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem('lego_theme') || 'dark';
+  });
   const [toasts, setToasts] = useState([]);
   const toastTimers = useRef({});
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('lego_theme', theme);
+  }, [theme]);
 
   const dismissToast = useCallback((id) => {
     if (toastTimers.current[id]) {
@@ -48,9 +56,27 @@ export default function App() {
     }, 3600);
   }, [dismissToast]);
 
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      showToast(
+        next === 'light' ? 'Light Theme Active' : 'Dark Theme Active',
+        next === 'light' ? 'Switched to clean daytime view' : 'Switched to sleek night view',
+        'info',
+        next === 'light' ? '☀️' : '🌙'
+      );
+      return next;
+    });
+  }, [showToast]);
+
   return (
     <div className="app-shell">
-      <Navbar activeTab={activeTab} onTabChange={setActiveTab} />
+      <Navbar
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
       
       <main className="container">
         {activeTab === 'deals' ? (
