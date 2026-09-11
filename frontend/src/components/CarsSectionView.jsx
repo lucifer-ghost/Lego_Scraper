@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
-export default function CarsSectionView() {
+export default function CarsSectionView({ onToast }) {
   const [store, setStore] = useState('all');
   const [category, setCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,7 +36,11 @@ export default function CarsSectionView() {
       const res = await fetch(`/api/cars?${query.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setCars(data.cars || []);
+      const list = data.cars || [];
+      setCars(list);
+      if (forceRefresh && onToast) {
+        onToast("Catalog Refreshed", `Loaded ${list.length} verified LEGO models across all stores!`, "success", "⚡");
+      }
     } catch (err) {
       setError(err.message || 'Failed to load cars.');
     } finally {
@@ -51,6 +55,30 @@ export default function CarsSectionView() {
   const handleStoreChange = (newStore) => {
     setStore(newStore);
     fetchCars(newStore);
+    const storeLabels = {
+      all: 'All 4 Stores',
+      amazon: 'Amazon.in',
+      flipkart: 'Flipkart',
+      hamleys: 'Hamleys India',
+      mybrickhouse: 'MyBrickHouse India',
+    };
+    if (onToast) {
+      onToast("Store Filter", `Switched to ${storeLabels[newStore] || newStore}`, "info", "🏪");
+    }
+  };
+
+  const handleCategoryChange = (newCat) => {
+    setCategory(newCat);
+    const labels = {
+      all: 'All Cars',
+      'formula 1': 'Formula 1',
+      supercar: 'Supercars',
+      technic: 'Technic',
+      'movie & iconic': 'Movie & Iconic',
+    };
+    if (onToast) {
+      onToast("Category Selected", `Showing ${labels[newCat] || newCat}`, "info", "🏁");
+    }
   };
 
   const categoryCounts = useMemo(() => {
@@ -204,7 +232,7 @@ export default function CarsSectionView() {
                 key={c.id}
                 type="button"
                 className={`compact-chip-btn ${category === c.id ? 'active' : ''}`}
-                onClick={() => setCategory(c.id)}
+                onClick={() => handleCategoryChange(c.id)}
               >
                 {c.label}
               </button>
@@ -222,12 +250,27 @@ export default function CarsSectionView() {
               placeholder="Search F1, Red Bull, Ferrari, McLaren, Mercedes, Technic, Batmobile, Skyline..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const q = searchQuery.trim();
+                  if (onToast) {
+                    if (q) {
+                      onToast("Search Results", `Found ${filteredCars.length} models for "${q}"`, "success", "🔍");
+                    } else {
+                      onToast("Search Cleared", `Showing all ${cars.length} models`, "info", "🔍");
+                    }
+                  }
+                }
+              }}
             />
             {searchQuery && (
               <button
                 type="button"
                 className="search-clear-btn"
-                onClick={() => setSearchQuery('')}
+                onClick={() => {
+                  setSearchQuery('');
+                  if (onToast) onToast("Search Cleared", `Showing all ${cars.length} models`, "info", "🔍");
+                }}
                 title="Clear search"
               >
                 ✕
@@ -244,7 +287,18 @@ export default function CarsSectionView() {
                   key={tag}
                   type="button"
                   className={`compact-tag-btn ${isActive ? 'active' : ''}`}
-                  onClick={() => setSearchQuery(isActive ? '' : tag)}
+                  onClick={() => {
+                    const next = isActive ? '' : tag;
+                    setSearchQuery(next);
+                    if (onToast && next) {
+                      const count = cars.filter((c) => {
+                        const title = (c.title || '').toLowerCase();
+                        const cat = (c.category || '').toLowerCase();
+                        return title.includes(next.toLowerCase()) || cat.includes(next.toLowerCase());
+                      }).length;
+                      onToast("Quick Search", `Filtered to "${next}" (${count} models)`, "success", "🏎️");
+                    }
+                  }}
                 >
                   {tag}
                 </button>

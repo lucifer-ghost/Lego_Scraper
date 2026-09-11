@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 
-export default function DealsRadarView() {
+export default function DealsRadarView({ onToast }) {
   const [minDisc, setMinDisc] = useState(40);
   const [maxDisc, setMaxDisc] = useState(50);
   const [platform, setPlatform] = useState('all');
@@ -32,7 +32,11 @@ export default function DealsRadarView() {
       const res = await fetch(`/api/scan?${query.toString()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setDeals(data.deals || []);
+      const list = data.deals || [];
+      setDeals(list);
+      if (onToast) {
+        onToast("Scan Complete", `Found ${list.length} verified LEGO deals!`, "success", "🎯");
+      }
     } catch (err) {
       setError(err.message || 'Failed to scan deals.');
     } finally {
@@ -48,11 +52,24 @@ export default function DealsRadarView() {
     setMinDisc(min);
     setMaxDisc(max);
     fetchDeals({ minDisc: min, maxDisc: max });
+    if (onToast) {
+      onToast("Preset Filter", `Filtering deals between ${min}% and ${max}% OFF`, "info", "⚡");
+    }
   };
 
   const handlePlatformChange = (newPlatform) => {
     setPlatform(newPlatform);
     fetchDeals({ platform: newPlatform });
+    const platLabels = {
+      all: 'All 4 Stores',
+      amazon: 'Amazon.in',
+      flipkart: 'Flipkart',
+      hamleys: 'Hamleys India',
+      mybrickhouse: 'MyBrickHouse India',
+    };
+    if (onToast) {
+      onToast("Platform Switched", `Showing deals from ${platLabels[newPlatform] || newPlatform}`, "info", "🏪");
+    }
   };
 
   const filteredDeals = useMemo(() => {
@@ -94,6 +111,9 @@ export default function DealsRadarView() {
     link.href = encoded;
     link.download = `lego_deals_${minDisc}_${maxDisc}_percent.csv`;
     link.click();
+    if (onToast) {
+      onToast("Export Successful", `Downloaded ${filteredDeals.length} deals as CSV`, "success", "📥");
+    }
   };
 
   const avgDiscount = deals.length
@@ -271,12 +291,27 @@ export default function DealsRadarView() {
               placeholder="Search in scanned deals (e.g. Ninjago, Star Wars, Technic, City, set #)..."
               value={dealSearchQuery}
               onChange={(e) => setDealSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const q = dealSearchQuery.trim();
+                  if (onToast) {
+                    if (q) {
+                      onToast("Search Results", `Found ${filteredDeals.length} deals matching "${q}"`, "success", "🔍");
+                    } else {
+                      onToast("Search Cleared", `Showing all ${deals.length} deals`, "info", "🔍");
+                    }
+                  }
+                }
+              }}
             />
             {dealSearchQuery && (
               <button
                 type="button"
                 className="search-clear-btn"
-                onClick={() => setDealSearchQuery('')}
+                onClick={() => {
+                  setDealSearchQuery('');
+                  if (onToast) onToast("Search Cleared", `Showing all ${deals.length} deals`, "info", "🔍");
+                }}
                 title="Clear search"
               >
                 ✕
