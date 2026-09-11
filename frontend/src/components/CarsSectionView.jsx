@@ -562,7 +562,8 @@ export default function CarsSectionView({ onToast }) {
                       rel="noopener noreferrer"
                       className={`btn-buy btn-buy-${storeClass}`}
                     >
-                      Buy on {storeLabel} ↗
+                      <span>Buy on {storeLabel}</span>
+                      <span className="btn-arrow">↗</span>
                     </a>
                   </div>
                 </div>
