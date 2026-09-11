@@ -210,33 +210,35 @@ export default function DealsRadarView() {
             </div>
           </div>
 
-          {/* Scan Depth Dropdown - Auto Detect All Pages */}
-          <div className="compact-dropdown-group">
-            <span className="compact-label">PAGES:</span>
-            <select
-              className="custom-dropdown"
-              value={pages}
-              onChange={(e) => setPages(e.target.value)}
-              title="Select how many pages to scan or auto-detect all pages"
-            >
-              <option value="all">⚡ All Pages (Auto-Detect Catalog)</option>
-              <option value="10">Up to 10 Pages</option>
-              <option value="5">Up to 5 Pages (Fast Scan)</option>
-              <option value="2">Up to 2 Pages (Quick Preview)</option>
-            </select>
-          </div>
+          {/* Sub-row for Dropdown & Brand Toggle */}
+          <div className="compact-dropdown-and-toggle">
+            <div className="compact-dropdown-group">
+              <span className="compact-label">PAGES:</span>
+              <select
+                className="custom-dropdown"
+                value={pages}
+                onChange={(e) => setPages(e.target.value)}
+                title="Select how many pages to scan or auto-detect all pages"
+              >
+                <option value="all">⚡ All Pages (Auto-Detect Catalog)</option>
+                <option value="10">Up to 10 Pages</option>
+                <option value="5">Up to 5 Pages (Fast Scan)</option>
+                <option value="2">Up to 2 Pages (Quick Preview)</option>
+              </select>
+            </div>
 
-          {/* Official Brand Toggle */}
-          <label className="compact-brand-toggle" htmlFor="officialToggle" title="Strictly filters authentic LEGO sets">
-            <input
-              type="checkbox"
-              id="officialToggle"
-              checked={officialOnly}
-              onChange={(e) => setOfficialOnly(e.target.checked)}
-            />
-            <span className="toggle-pill-thumb"></span>
-            <span className="compact-brand-text">🛡️ Official LEGO</span>
-          </label>
+            {/* Official Brand Toggle */}
+            <label className="compact-brand-toggle" htmlFor="officialToggle" title="Strictly filters authentic LEGO sets">
+              <input
+                type="checkbox"
+                id="officialToggle"
+                checked={officialOnly}
+                onChange={(e) => setOfficialOnly(e.target.checked)}
+              />
+              <span className="toggle-pill-thumb"></span>
+              <span className="compact-brand-text">🛡️ Official LEGO</span>
+            </label>
+          </div>
 
           {/* Scan Button */}
           <button
@@ -353,22 +355,8 @@ export default function DealsRadarView() {
 
       {/* Closest Match / Active Deals Notification Banner */}
       {deals.some((d) => d.closest_match) && (
-        <div
-          className="closest-match-banner"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 193, 7, 0.12) 0%, rgba(255, 153, 0, 0.08) 100%)',
-            border: '1px solid rgba(255, 193, 7, 0.35)',
-            borderRadius: '10px',
-            padding: '12px 18px',
-            marginBottom: '18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            color: '#ffc107',
-            fontSize: '0.92rem',
-          }}
-        >
-          <span style={{ fontSize: '1.3rem' }}>⚡</span>
+        <div className="closest-match-banner">
+          <span className="banner-icon">⚡</span>
           <div>
             <strong>Verified Live Deals Active:</strong> Limited sets currently found at {minDisc}%–{maxDisc}% on {platform === 'all' || platform === 'both' ? 'these platforms' : platform}. Showing highest discount verified LEGO deals available right now!
           </div>
