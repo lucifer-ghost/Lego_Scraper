@@ -497,13 +497,13 @@ export default function CarsSectionView({ onToast }) {
               ? 'badge-hamleys'
               : 'badge-mybrickhouse';
 
-            const buyBtnStyle = isAmazon
-              ? { background: 'rgba(255,153,0,0.15)', borderColor: 'rgba(255,153,0,0.4)', color: '#fff' }
+            const storeClass = isAmazon
+              ? 'amazon'
               : isFlipkart
-              ? { background: 'rgba(40,116,240,0.15)', borderColor: 'rgba(40,116,240,0.4)', color: '#fff' }
+              ? 'flipkart'
               : isHamleys
-              ? { background: 'rgba(225,29,72,0.15)', borderColor: 'rgba(225,29,72,0.4)', color: '#fff' }
-              : { background: 'rgba(13,148,136,0.15)', borderColor: 'rgba(13,148,136,0.4)', color: '#fff' };
+              ? 'hamleys'
+              : 'mybrickhouse';
 
             const storeLabel = isAmazon
               ? 'Amazon'
@@ -560,8 +560,7 @@ export default function CarsSectionView({ onToast }) {
                       href={car.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="btn-buy"
-                      style={buyBtnStyle}
+                      className={`btn-buy btn-buy-${storeClass}`}
                     >
                       Buy on {storeLabel} ↗
                     </a>
