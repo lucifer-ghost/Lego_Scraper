@@ -24,10 +24,26 @@ NON_LEGO_BRANDS = [
     'architect series', 'tma', 'mizuware', 'generic'
 ]
 
-def clean_number(text: str) -> Optional[int]:
-    """Extract integer number from string (e.g., '₹1,606' -> 1606)."""
+def clean_number(text: str) -> Optional[float | int]:
+    """Extract number from string, correctly preserving decimal points (paise/cents).
+    Examples:
+      '₹1,606' -> 1606
+      '₹14,357.25' -> 14357.25
+      'M.R.P.: ₹21,753.31' -> 21753.31
+      '₹21,753.31M.R.P.: ₹21,753.31' -> 21753.31
+    """
     if not text:
         return None
+    m = re.search(r'(?:₹|rs\.?|inr)?\s*([\d,]+(?:\.\d{1,2})?)', str(text), re.IGNORECASE)
+    if not m:
+        m = re.search(r'([\d,]+(?:\.\d{1,2})?)', str(text))
+    if m:
+        raw = m.group(1).replace(',', '').rstrip('.')
+        try:
+            val = float(raw)
+            return int(val) if val.is_integer() else round(val, 2)
+        except ValueError:
+            pass
     cleaned = re.sub(r'[^\d]', '', str(text))
     return int(cleaned) if cleaned else None
 
@@ -341,8 +357,13 @@ def scrape_amazon(
                         continue
 
                 # Extract price
-                p_whole = item.find('span', class_='a-price-whole')
-                price = clean_number(p_whole.get_text()) if p_whole else None
+                p_elem = item.find('span', class_='a-price')
+                p_off = p_elem.find('span', class_='a-offscreen') if p_elem else None
+                if p_off:
+                    price = clean_number(p_off.get_text())
+                else:
+                    p_whole = item.find('span', class_='a-price-whole')
+                    price = clean_number(p_whole.get_text()) if p_whole else None
 
                 # Extract basis / MRP
                 m_span = item.find('span', class_='a-price a-text-price')
@@ -372,7 +393,7 @@ def scrape_amazon(
 
                 # If mrp wasn't in HTML, calculate from discount
                 if not mrp and price and discount:
-                    mrp = round(price / (1 - discount / 100))
+                    mrp = round(price / (1 - discount / 100), 2)
 
                 # Rating
                 rating_el = item.find('span', class_='a-icon-alt')
@@ -387,7 +408,7 @@ def scrape_amazon(
                     'price': price,
                     'mrp': mrp,
                     'discount': discount,
-                    'savings': (mrp - price) if (mrp and price and mrp > price) else 0,
+                    'savings': round(mrp - price, 2) if (mrp and price and mrp > price) else 0,
                     'rating': rating,
                     'image': img_url,
                     'url': product_url
@@ -921,8 +942,13 @@ def scrape_amazon_cars(pages: int = 2, verbose: bool = True) -> List[Dict]:
                     if not any(k in title_l for k in car_keywords):
                         continue
 
-                    p_whole = item.find('span', class_='a-price-whole')
-                    price = clean_number(p_whole.get_text()) if p_whole else None
+                    p_elem = item.find('span', class_='a-price')
+                    p_off = p_elem.find('span', class_='a-offscreen') if p_elem else None
+                    if p_off:
+                        price = clean_number(p_off.get_text())
+                    else:
+                        p_whole = item.find('span', class_='a-price-whole')
+                        price = clean_number(p_whole.get_text()) if p_whole else None
 
                     m_span = item.find('span', class_='a-price a-text-price')
                     mrp = None
@@ -930,6 +956,10 @@ def scrape_amazon_cars(pages: int = 2, verbose: bool = True) -> List[Dict]:
                         off = m_span.find('span', class_='a-offscreen')
                         if off:
                             mrp = clean_number(off.get_text())
+
+                    # Sanity check on MRP
+                    if price and mrp and mrp > price * 3:
+                        mrp = None
 
                     disc_match = re.search(r'\((\d+)%\s*off\)', item.get_text())
                     discount = int(disc_match.group(1)) if disc_match else (round((1 - price / mrp) * 100) if (price and mrp and mrp > price) else 0)
@@ -946,7 +976,7 @@ def scrape_amazon_cars(pages: int = 2, verbose: bool = True) -> List[Dict]:
                         'price': price,
                         'mrp': mrp or price,
                         'discount': discount,
-                        'savings': (mrp - price) if (mrp and price and mrp > price) else 0,
+                        'savings': round(mrp - price, 2) if (mrp and price and mrp > price) else 0,
                         'category': category,
                         'rating': rating,
                         'image': img_url,

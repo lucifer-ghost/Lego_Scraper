@@ -489,13 +489,13 @@ export default function CarsSectionView() {
                   </h4>
                   <div className="price-row">
                     <span className="current-price">
-                      {car.price ? `₹${car.price.toLocaleString('en-IN')}` : 'Check Store'}
+                      {car.price ? `₹${Number(car.price).toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : 'Check Store'}
                     </span>
                     {car.mrp && car.mrp > car.price && (
-                      <span className="mrp">₹{car.mrp.toLocaleString('en-IN')}</span>
+                      <span className="mrp">₹{Number(car.mrp).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                     )}
                     {car.savings > 0 && (
-                      <span className="savings-pill">Save ₹{car.savings.toLocaleString('en-IN')}</span>
+                      <span className="savings-pill">Save ₹{Number(car.savings).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                     )}
                   </div>
                   <div className="card-footer">

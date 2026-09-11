@@ -514,12 +514,12 @@ export default function DealsRadarView() {
                     {deal.title}
                   </h4>
                   <div className="price-row">
-                    <span className="current-price">₹{deal.price?.toLocaleString('en-IN')}</span>
+                    <span className="current-price">₹{deal.price != null ? Number(deal.price).toLocaleString('en-IN', { maximumFractionDigits: 2 }) : ''}</span>
                     {deal.mrp && deal.mrp > deal.price && (
-                      <span className="mrp">₹{deal.mrp.toLocaleString('en-IN')}</span>
+                      <span className="mrp">₹{Number(deal.mrp).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                     )}
                     {deal.savings > 0 && (
-                      <span className="savings-pill">Save ₹{deal.savings.toLocaleString('en-IN')}</span>
+                      <span className="savings-pill">Save ₹{Number(deal.savings).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</span>
                     )}
                   </div>
                   <div className="card-footer">
