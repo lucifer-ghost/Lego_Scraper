@@ -4,7 +4,7 @@ export default function Navbar({ activeTab, onTabChange, theme = 'dark', onToggl
   return (
     <header>
       <div className="header-inner">
-        {/* Brand Group (with Mobile Theme Toggle) */}
+        {/* Brand Group */}
         <div className="brand-group">
           <div className="brand">
             <div className="brick-icon">🧱</div>
@@ -13,20 +13,6 @@ export default function Navbar({ activeTab, onTabChange, theme = 'dark', onToggl
             </div>
             <span className="brand-badge">India</span>
           </div>
-
-          <button
-            type="button"
-            className="theme-toggle-btn mobile-theme-toggle"
-            onClick={onToggleTheme}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
-          >
-            <div className="theme-toggle-track">
-              <span className="toggle-icon-sun">☀️</span>
-              <span className="toggle-icon-moon">🌙</span>
-              <div className={`theme-toggle-thumb ${theme}`} />
-            </div>
-          </button>
         </div>
 
         {/* Primary Tabs */}
@@ -47,7 +33,7 @@ export default function Navbar({ activeTab, onTabChange, theme = 'dark', onToggl
           </button>
         </nav>
 
-        {/* Right Group: Direct Store Links & Desktop Theme Toggle */}
+        {/* Right Group: Direct Store Links & Theme Toggle */}
         <div className="header-right-group">
           <div className="header-links">
             <a
@@ -86,7 +72,7 @@ export default function Navbar({ activeTab, onTabChange, theme = 'dark', onToggl
 
           <button
             type="button"
-            className="theme-toggle-btn desktop-theme-toggle"
+            className="theme-toggle-btn"
             onClick={onToggleTheme}
             aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
             title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}

@@ -5,75 +5,35 @@ export default function Footer() {
 
   return (
     <footer className="app-footer">
-      <div className="footer-inner">
-        {/* Left / Main Section: Brand & Description */}
-        <div className="footer-col-main">
-          <div className="footer-brand">
+      <div className="footer-compact-inner">
+        {/* Left: Brand Identity & Concise Info */}
+        <div className="footer-compact-left">
+          <div className="footer-brand-row">
             <span className="footer-logo">🧱</span>
             <span className="footer-title">LEGO Deal Radar</span>
             <span className="footer-country-badge">India</span>
           </div>
-          <p className="footer-desc">
-            Autonomous multi-store intelligence tracking authentic LEGO® sets, Speed Champions, and Formula 1 racers across India's top retailers.
+          <p className="footer-compact-desc">
+            Autonomous multi-store intelligence across Amazon, Flipkart, Hamleys &amp; MyBrickHouse. Enthusiast tracker, not affiliated with the LEGO Group.
           </p>
-          
-          {/* Live Store Chips */}
-          <div className="footer-stores">
-            <span className="footer-store-chip amazon">
-              <span className="dot" /> Amazon.in
-            </span>
-            <span className="footer-store-chip flipkart">
-              <span className="dot" /> Flipkart
-            </span>
-            <span className="footer-store-chip hamleys">
-              <span className="dot" /> Hamleys India
-            </span>
-            <span className="footer-store-chip mybrickhouse">
-              <span className="dot" /> MyBrickHouse
-            </span>
-          </div>
         </div>
 
-        {/* Center / Feature Highlights */}
-        <div className="footer-col-features">
-          <h4 className="footer-col-title">Radar Capabilities</h4>
-          <ul className="footer-features-list">
-            <li>⚡ Real-time price tracking & verification</li>
-            <li>🏎️ Dedicated F1 & Speed Champions catalog</li>
-            <li>🛡️ 100% Genuine LEGO filtering</li>
-            <li>💰 Savings & discount calculator</li>
-            <li>📥 1-Click CSV data export</li>
-          </ul>
-        </div>
-
-        {/* Right End: Created by GHOST & Details */}
-        <div className="footer-col-right">
-          <div className="creator-card">
-            <div className="creator-badge-wrap">
-              <span className="creator-ghost-icon">👻</span>
-              <div className="creator-text-block">
-                <span className="creator-sub">PROJECT ARCHITECT</span>
-                <span className="creator-name">Created by <strong className="ghost-highlight">GHOST</strong></span>
-              </div>
+        {/* Right: Created by GHOST & Status */}
+        <div className="footer-compact-right">
+          <div className="creator-compact-badge">
+            <span className="creator-ghost-icon">👻</span>
+            <div className="creator-compact-text">
+              <span className="creator-sub">PROJECT ARCHITECT</span>
+              <span className="creator-name">
+                Created by <strong className="ghost-highlight">GHOST</strong>
+              </span>
             </div>
-            <p className="creator-status">
-              <span className="pulse-indicator" /> System Online & Tracking
-            </p>
+            <span className="pulse-indicator" title="System Online &amp; Tracking" />
           </div>
-
-          <div className="footer-copyright">
-            © {currentYear} LEGO Deal Radar India.
-          </div>
+          <span className="footer-compact-copyright">© {currentYear} LEGO Radar</span>
         </div>
-      </div>
-
-      {/* Bottom Legal Disclaimer */}
-      <div className="footer-bottom-bar">
-        <p className="footer-disclaimer">
-          <strong>Disclaimer:</strong> LEGO® is a trademark of the LEGO Group of companies, which does not sponsor, authorize, or endorse this application. 
-          All product names, logos, and brands are property of their respective owners. Prices and availability are subject to real-time retailer updates.
-        </p>
       </div>
     </footer>
   );
 }
+
