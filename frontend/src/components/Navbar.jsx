@@ -33,57 +33,56 @@ export default function Navbar({ activeTab, onTabChange, theme = 'dark', onToggl
           </button>
         </nav>
 
-        {/* Right Group: Direct Store Links & Theme Toggle */}
-        <div className="header-right-group">
-          <div className="header-links">
-            <a
-              href="https://www.amazon.in/s?k=lego&rh=p_89%3ALEGO%2Cp_n_pct-off-with-tax%3A2665402031"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="direct-btn direct-amazon"
-            >
-              <span>🛒 Amazon</span> ↗
-            </a>
-            <a
-              href="https://www.flipkart.com/search?q=lego&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="direct-btn direct-flipkart"
-            >
-              <span>🛍️ Flipkart</span> ↗
-            </a>
-            <a
-              href="https://hamleys.in/products?brand=lego"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="direct-btn direct-hamleys"
-            >
-              <span>🧸 Hamleys</span> ↗
-            </a>
-            <a
-              href="https://lego.mybrickhouse.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="direct-btn direct-mybrickhouse"
-            >
-              <span>🧱 MyBrickHouse</span> ↗
-            </a>
-          </div>
-
-          <button
-            type="button"
-            className="theme-toggle-btn"
-            onClick={onToggleTheme}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+        {/* Direct Store Links */}
+        <div className="header-links">
+          <a
+            href="https://www.amazon.in/s?k=lego&rh=p_89%3ALEGO%2Cp_n_pct-off-with-tax%3A2665402031"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="direct-btn direct-amazon"
           >
-            <div className="theme-toggle-track">
-              <span className="toggle-icon-sun">☀️</span>
-              <span className="toggle-icon-moon">🌙</span>
-              <div className={`theme-toggle-thumb ${theme}`} />
-            </div>
-          </button>
+            <span>🛒 Amazon</span> ↗
+          </a>
+          <a
+            href="https://www.flipkart.com/search?q=lego&p%5B%5D=facets.discount_range_v1%255B%255D%3D40%2525%2Bor%2Bmore"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="direct-btn direct-flipkart"
+          >
+            <span>🛍️ Flipkart</span> ↗
+          </a>
+          <a
+            href="https://hamleys.in/products?brand=lego"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="direct-btn direct-hamleys"
+          >
+            <span>🧸 Hamleys</span> ↗
+          </a>
+          <a
+            href="https://lego.mybrickhouse.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="direct-btn direct-mybrickhouse"
+          >
+            <span>🧱 MyBrickHouse</span> ↗
+          </a>
         </div>
+
+        {/* Animated Theme Toggle Button */}
+        <button
+          type="button"
+          className="theme-toggle-btn"
+          onClick={onToggleTheme}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+          title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+        >
+          <div className="theme-toggle-track">
+            <span className="toggle-icon-sun">☀️</span>
+            <span className="toggle-icon-moon">🌙</span>
+            <div className={`theme-toggle-thumb ${theme}`} />
+          </div>
+        </button>
       </div>
     </header>
   );

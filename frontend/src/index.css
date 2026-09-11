@@ -82,12 +82,7 @@ header {
   display: flex;
   align-items: center;
   gap: 14px;
-}
-
-.header-right-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-shrink: 0;
 }
 
 /* Animated Theme Toggle Button */
@@ -248,6 +243,7 @@ header {
   display: flex;
   gap: 10px;
   align-items: center;
+  margin-left: auto;
 }
 
 .direct-btn {
@@ -1473,28 +1469,30 @@ header {
   }
 
   .header-inner {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand toggle"
+      "tabs tabs"
+      "links links";
+    gap: 10px;
+    align-items: center;
+    width: 100%;
   }
 
   .brand-group {
+    grid-area: brand;
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    width: 100%;
-  }
-
-  .header-right-group {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 8px;
   }
 
   .theme-toggle-btn {
+    grid-area: toggle;
+    justify-self: end;
+    align-self: center;
     flex-shrink: 0;
+    margin: 0;
   }
 
   .brand {
@@ -1520,6 +1518,7 @@ header {
 
   /* Main Navigation Tabs: 50% Full-Width Control */
   .main-tabs {
+    grid-area: tabs;
     width: 100%;
     display: flex;
     gap: 4px;
@@ -1539,6 +1538,7 @@ header {
 
   /* Direct Store Links: Horizontal Touch Scroll Pill Track */
   .header-links {
+    grid-area: links;
     width: 100%;
     display: flex;
     overflow-x: auto;
@@ -1560,9 +1560,9 @@ header {
     white-space: nowrap;
   }
 
-  /* Container: Edge-to-Edge Breathing Room */
+  /* Container: Edge-to-Edge Breathing Room with Generous Clearance Above Fixed Footer */
   .container {
-    padding: 12px 10px 60px;
+    padding: 12px 10px 90px;
   }
 
   /* Compact Filter Bar */
@@ -1944,21 +1944,78 @@ header {
     font-size: 0.74rem;
   }
 
-  /* Mobile Fixed Bottom Footer */
+  /* Mobile Fixed Bottom Footer - Solid Opaque, No Bleed, Crisp Spacing */
   .app-footer-fixed {
-    height: 36px;
-    min-height: 36px;
-    padding: 0 10px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 14px;
+    background: #090d16 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.6);
   }
+
+  [data-theme="light"] .app-footer-fixed {
+    background: #ffffff !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-top: 1px solid #e2e8f0;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+  }
+
+  .footer-bar-inner {
+    padding: 0;
+    gap: 8px;
+    justify-content: space-between;
+  }
+
   .footer-bar-stores,
-  .footer-bar-sep {
-    display: none;
+  .footer-bar-sep,
+  .footer-bar-badge {
+    display: none !important;
   }
+
+  .footer-bar-left {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .footer-bar-logo {
+    font-size: 0.95rem;
+  }
+
   .footer-bar-title {
     font-size: 0.78rem;
+    font-weight: 800;
   }
+
+  .footer-bar-right {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .creator-bar-pill {
+    padding: 2px 8px;
+    gap: 5px;
+  }
+
+  .creator-ghost-icon {
+    font-size: 0.9rem;
+  }
+
   .creator-bar-text {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
+  }
+
+  .footer-bar-copy {
+    font-size: 0.65rem;
+  }
+
+  @media (max-width: 380px) {
+    .footer-bar-copy {
+      display: none;
+    }
   }
 }
 
