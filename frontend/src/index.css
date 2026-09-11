@@ -916,10 +916,13 @@ header {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+  mix-blend-mode: multiply;
 }
 .deal-card:hover .card-thumb img {
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
 .badge-discount {
@@ -934,6 +937,8 @@ header {
   border-radius: 6px;
   box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4);
   letter-spacing: -0.01em;
+  z-index: 10;
+  pointer-events: none;
 }
 
 .badge-category {
@@ -948,6 +953,24 @@ header {
   padding: 3px 8px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.15);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.badge-verified {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.78);
+  color: #4ade80;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  z-index: 10;
+  pointer-events: none;
 }
 
 .badge-platform {
@@ -960,6 +983,8 @@ header {
   border-radius: 6px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
+  z-index: 10;
+  pointer-events: none;
 }
 .badge-amazon {
   background: rgba(255, 153, 0, 0.9);
@@ -1571,7 +1596,8 @@ header {
     font-size: 0.68rem;
     padding: 3px 7px;
   }
-  .badge-category {
+  .badge-category,
+  .badge-verified {
     bottom: 8px;
     left: 8px;
     font-size: 0.66rem;

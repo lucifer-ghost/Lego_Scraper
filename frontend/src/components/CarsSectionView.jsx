@@ -462,6 +462,15 @@ export default function CarsSectionView() {
             return (
               <div className="deal-card" key={car.id || car.url}>
                 <div className="card-thumb">
+                  <img
+                    src={car.image || fallbackImg}
+                    alt={car.title}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      e.target.src = fallbackImg;
+                    }}
+                  />
                   {car.discount > 0 && (
                     <span className="badge-discount">{car.discount}% OFF</span>
                   )}
@@ -473,15 +482,6 @@ export default function CarsSectionView() {
                   {car.category && (
                     <span className="badge-category">{car.category}</span>
                   )}
-                  <img
-                    src={car.image || fallbackImg}
-                    alt={car.title}
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                    onError={(e) => {
-                      e.target.src = fallbackImg;
-                    }}
-                  />
                 </div>
                 <div className="card-body">
                   <h4 className="product-title" title={car.title}>

@@ -486,31 +486,6 @@ export default function DealsRadarView() {
             return (
               <div className="deal-card" key={deal.id || deal.url}>
                 <div className="card-thumb">
-                  <span className="badge-discount">{deal.discount}% OFF</span>
-                  <span
-                    className={`badge-platform ${badgeClass}`}
-                  >
-                    {deal.platform}
-                  </span>
-                  {deal.cached && (
-                    <span
-                      style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        left: '8px',
-                        background: 'rgba(0, 0, 0, 0.75)',
-                        color: '#4ade80',
-                        fontSize: '0.7rem',
-                        fontWeight: '600',
-                        padding: '2px 7px',
-                        borderRadius: '6px',
-                        backdropFilter: 'blur(4px)',
-                        border: '1px solid rgba(74, 222, 128, 0.35)',
-                      }}
-                    >
-                      ✓ Verified Deal
-                    </span>
-                  )}
                   <img
                     src={deal.image || fallbackImg}
                     alt={deal.title}
@@ -520,6 +495,19 @@ export default function DealsRadarView() {
                       e.target.src = fallbackImg;
                     }}
                   />
+                  {deal.discount > 0 && (
+                    <span className="badge-discount">{deal.discount}% OFF</span>
+                  )}
+                  <span
+                    className={`badge-platform ${badgeClass}`}
+                  >
+                    {deal.platform}
+                  </span>
+                  {deal.cached && (
+                    <span className="badge-verified">
+                      ✓ Verified Deal
+                    </span>
+                  )}
                 </div>
                 <div className="card-body">
                   <h4 className="product-title" title={deal.title}>
